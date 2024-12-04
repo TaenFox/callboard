@@ -50,3 +50,13 @@ class CardDTO():
         except Exception as e:
             print("Can't return card list")
             return None
+        
+    def delete_card_by_id(self, card_id:str):
+        '''Удаляет указанную запись card'''
+        try:
+            result = self.db.delete_by_id(card_id)
+            if result==None: raise Exception("Can't delete card")
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            return None

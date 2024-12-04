@@ -2,7 +2,7 @@ from data.interface_db import CardDTO
 from model.card import Card
 import callboard
 import pytest
-import uuid, json
+import uuid, datetime
 
 @pytest.fixture()
 def temp_catalog_card(tmp_path):
@@ -25,6 +25,7 @@ def test_get_callboard_by_hashtag(temp_catalog_card):
             card.message_id = card_id
             card.hashtags.append(hashtag)
             card.hashtags.append("common")
+            card.delete_until = ""
             card.text = "Example text for list of cards in callboard"
             CardDTO(temp_catalog_card).add_card_by_id(card_id, card.to_dict())
 
@@ -34,8 +35,37 @@ def test_get_callboard_by_hashtag(temp_catalog_card):
                                  "card_id": card_id,
                                  "message_id": card_id,
                                  "text": "Example text for list of cards in callboard (no hashtag)",
-                                 "hashtags":[]
+                                 "hashtags":[],
+                                 "delete_until": ""
                              })
     result = callboard.list_card(temp_catalog_card)
     print(result)
     assert result != []
+
+def test_cleaning_cards(temp_catalog_card):
+    card_id = str(uuid.uuid4())
+    past_date_until = datetime.datetime.now() - datetime.timedelta(hours=1)
+    future_date_until = datetime.datetime.now() + datetime.timedelta(hours=1)
+    CardDTO(temp_catalog_card).add_card_by_id(card_id, \
+                             {
+                                 "card_id": card_id,
+                                 "message_id": card_id,
+                                 "text": "Example text for cleaning cards in callboard",
+                                 "hashtags":[],
+                                 "delete_until": past_date_until.timestamp()
+                             })
+    callboard.clear(temp_catalog_card)
+    result = CardDTO(temp_catalog_card).get_card_by_id(card_id)
+    assert result==None
+
+    CardDTO(temp_catalog_card).add_card_by_id(card_id, \
+                             {
+                                 "card_id": card_id,
+                                 "message_id": card_id,
+                                 "text": "Example text for cleaning cards in callboard",
+                                 "hashtags":[],
+                                 "delete_until": future_date_until.timestamp()
+                             })
+    callboard.clear(temp_catalog_card)    
+    result = CardDTO(temp_catalog_card).get_card_by_id(card_id)
+    assert result!=None

@@ -1,5 +1,6 @@
 from data.interface_db import CardDTO
 from model.card import Card
+from datetime import datetime as dt
 
 def add_card(new_card:Card, path:str = ""):
     '''Добавить новую запись card'''
@@ -11,12 +12,13 @@ def add_card(new_card:Card, path:str = ""):
         print(e)
         return None
 
-def list_card(path:str = ""):
+def list_card(path:str = "", by_hashtag:bool = True):
     '''Получить список всех записей card'''
     try:
         result = CardDTO(path).get_card_list()
         if result==None: raise Exception("No card list!")
-        
+        if by_hashtag==False: return result
+
         try:
             callboard_by_hashtags = {}
             for card_dict in result:
@@ -54,3 +56,16 @@ def list_card(path:str = ""):
 
 def clear(path:str = ""):
     '''Очистить устаревшие card'''
+    card_list = list_card(path, by_hashtag=False)
+    try:
+        for card_dict in card_list:
+            try:
+                card = Card().from_dict(card_dict)
+                card_time = dt.fromtimestamp(card.delete_until)
+                if card_time < dt.now(): 
+                    CardDTO(path).delete_card_by_id(card.card_id)
+            except Exception as e:
+                print(f"Can't parse date. This card has been removed: {card_dict}")
+                CardDTO(path).delete_card_by_id(card.card_id)
+    except Exception as e:
+        print(f"Can't complete cleaning: {e}")

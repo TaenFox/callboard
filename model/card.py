@@ -3,12 +3,14 @@ class Card():
     message_id:str
     text:str
     hashtags:list
+    delete_until:str
 
     def __init__(self):
         self.card_id = ""
         self.message_id = ""
         self.text = ""
         self.hashtags = []
+        self.delete_until = ""
 
     def from_dict(self, data:dict):
         '''Заполняет модель card данными из словаря data'''
@@ -18,6 +20,7 @@ class Card():
             self.message_id = data['message_id']
             self.text = data['text']
             self.hashtags = data['hashtags']
+            self.delete_until = data['delete_until']
             return self
         except Exception as e:
             print(f"Can't use 'data' dictionary: {e}")
@@ -30,7 +33,8 @@ class Card():
                 "card_id": self.card_id,
                 "message_id": self.message_id,
                 "text": self.text,
-                "hashtags": self.hashtags
+                "hashtags": self.hashtags,
+                "delete_until":self.delete_until
             }
             return data
         except Exception as e:

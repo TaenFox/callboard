@@ -76,3 +76,12 @@ class FileDataBase():
         except Exception as e:
             print(f"Can't create list of files: {e}")
             return None
+        
+    def delete_by_id(self, id):
+        '''Удаляет содержимое записи по id'''
+        try:
+            os.remove(f"{self.catalog}/{id}.json")
+            return True
+        except Exception as e:
+            print(f"Can't delete file '{self.catalog}/{id}.json': {e}")
+            return None

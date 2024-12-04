@@ -70,3 +70,12 @@ def test_get_list_of_json_files(file_database):
     
     result_list = file_database.get_list()
     assert test_data == result_list
+
+def test_delete_file(file_database):
+    '''Тестирует удаление файла'''
+    data = {'name': 'John', 'age': 30}
+    id = 123
+    file_database.add_by_id(id, data)
+
+    result = file_database.delete_by_id(id)
+    assert result == True

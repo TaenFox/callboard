@@ -36,3 +36,9 @@ def test_get_card(temp_catalog_card, fix_card_data):
     CardDTO(temp_catalog_card).add_card_by_id(card_id, fix_card_data)
     exist_card_data = CardDTO(temp_catalog_card).get_card_by_id(card_id)
     assert exist_card_data == fix_card_data
+
+def test_delete_card(temp_catalog_card, fix_card_data):
+    card_id = fix_card_data['card_id']
+    CardDTO(temp_catalog_card).add_card_by_id(card_id, fix_card_data)
+    result = CardDTO(temp_catalog_card).delete_card_by_id(card_id)
+    assert result==True
