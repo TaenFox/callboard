@@ -41,3 +41,12 @@ class CardDTO():
         except Exception as e:
             print(f"Can't modify card by id = {card_id}: {e}")
             return None
+        
+    def get_card_list(self)->dict:
+        '''Возвращает список всех записей card'''
+        try:
+            result = self.db.get_list()
+            return result
+        except Exception as e:
+            print("Can't return card list")
+            return None

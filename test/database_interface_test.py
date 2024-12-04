@@ -1,17 +1,10 @@
 import sys 
 import os.path 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..") 
-
+# код выше - для истории, иногда pytest подлагивает и это может помочь пофиксить
 from data.interface_db import CardDTO
 import pytest
 import uuid, json
-
-@pytest.fixture
-def temp_catalog_user(tmp_path):
-    '''Создаёт временный каталог user для тестов.'''
-    catalog = tmp_path / 'data' / 'user'
-    catalog.mkdir(parents=True, exist_ok=True)
-    return catalog
 
 @pytest.fixture()
 def temp_catalog_card(tmp_path):
@@ -22,7 +15,7 @@ def temp_catalog_card(tmp_path):
 
 @pytest.fixture
 def fix_card_data():
-    '''Пресет данных для фидбека'''
+    '''Пресет данных для card'''
     return  {
         "card_id": str(uuid.uuid4())
     }
