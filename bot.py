@@ -108,9 +108,9 @@ async def schedule_daily_clear():
 
 # Запуск бота
 async def main():
+    print("Бот запущен!")
     await dp.start_polling(bot)
     asyncio.create_task(schedule_daily_clear())
-    print("Бот запущен!")
 
 if __name__ == "__main__":
     asyncio.run(main())
