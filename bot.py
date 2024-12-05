@@ -20,6 +20,19 @@ if not TOKEN:
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+# Обработчик команды /board
+@dp.message(Command("board"))
+async def handle_board_command(message: Message):
+    try:
+        cards_data = callboard.list_card(chat_id=str(message.chat.id))
+        if len(cards_data)==0: await message.reply("Нет актуальных объявлений")
+        else:
+            board_text = create_board(cards_data)
+            await message.reply(board_text, parse_mode="Markdown")
+    except Exception as e:
+        print(f"Ошибка при обработке команды /board: {e}")
+        await message.reply("Произошла ошибка при создании доски.")
+
 # Хендлер для сообщений
 @dp.message(F.text)
 async def handle_mention(message: Message):
@@ -49,25 +62,14 @@ async def handle_mention(message: Message):
         except Exception as e:
             print(f"Ошибка при добавлении реакции: {e}")
 
-# Обработчик команды /board
-@dp.message(Command("board"))
-async def handle_board_command(message: Message):
-    try:
-        cards_data = callboard.list_card(chat_id=message.chat.id)
-        board_text = create_board(cards_data)
-        await message.reply(board_text, parse_mode="Markdown")
-    except Exception as e:
-        print(f"Ошибка при обработке команды /board: {e}")
-        await message.reply("Произошла ошибка при создании доски.")
-
 def create_board(cards_data):
     result = []
     for hashtag, cards in cards_data.items():
         result.append(f"{hashtag}:")
         for card in cards:
             text_preview = card["text"][:80] + ("..." if len(card["text"]) > 80 else "")
-            link = f"https://t.me/c/{str(card['chat_id'][4:])}/{str(card['message_id'])}"  # Формат ссылки
-            result.append(f"- {text_preview} [ссылка]({link})")
+            link = f"https://t.me/c/{str(card['chat_id'])}/{str(card['message_id'])}"  # Формат ссылки
+            result.append(f"- {text_preview.replace('@', '')} [ссылка]({link})")
         result.append("")  # Пустая строка для разделения
     return "\n".join(result)
 
