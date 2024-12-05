@@ -68,7 +68,7 @@ class FileDataBase():
             files_list:list = []
             file_name:str
             for file_name in files:
-                if not re.match("[A-Za-z|\-|0-9]+(\.json)", file_name): break
+                if not re.match("[A-Za-z|\-|0-9]+(\.json)", file_name): continue
                 with open(f"{self.catalog}/{file_name}", "r", encoding="utf-8") as json_file:
                     json_data = json.load(json_file)
                 files_list.append(json_data)
