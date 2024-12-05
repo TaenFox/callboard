@@ -30,6 +30,7 @@ async def handle_mention(message: Message):
         card = Card()
         card.card_id = message.message_id
         card.message_id = message.message_id
+        card.chat_id = message.chat.id
         card.text = message.text
         card.delete_until = delete_time.timestamp()
         card.hashtags = hashtags

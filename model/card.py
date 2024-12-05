@@ -1,6 +1,7 @@
 class Card():
     card_id:str
     message_id:str
+    chat_id:str
     text:str
     hashtags:list
     delete_until:str
@@ -18,6 +19,7 @@ class Card():
         try:
             self.card_id = data['card_id']
             self.message_id = data['message_id']
+            self.chat_id = data['chat_id']
             self.text = data['text']
             self.hashtags = data['hashtags']
             self.delete_until = data['delete_until']
@@ -32,6 +34,7 @@ class Card():
             data = {
                 "card_id": self.card_id,
                 "message_id": self.message_id,
+                "chat_id": self.chat_id,
                 "text": self.text,
                 "hashtags": self.hashtags,
                 "delete_until":self.delete_until

@@ -12,11 +12,19 @@ def add_card(new_card:Card, path:str = ""):
         print(e)
         return None
 
-def list_card(path:str = "", by_hashtag:bool = True):
+def list_card(path:str = "", chat_id:str = "", by_hashtag:bool = True):
     '''Получить список всех записей card'''
     try:
-        result = CardDTO(path).get_card_list()
-        if result==None: raise Exception("No card list!")
+        result_all = CardDTO(path).get_card_list()
+        if result_all == None: raise Exception("No card list!")
+        
+        result = []
+        if chat_id != "":
+            for item in result_all:
+                if "chat_id" in item and item["chat_id"]==chat_id:
+                    result.append(item)
+        else: result = result_all
+
         if by_hashtag==False: return result
 
         try:

@@ -50,6 +50,7 @@ def test_cleaning_cards(temp_catalog_card):
                              {
                                  "card_id": card_id,
                                  "message_id": card_id,
+                                 "chat_id": "1234",
                                  "text": "Example text for cleaning cards in callboard",
                                  "hashtags":[],
                                  "delete_until": past_date_until.timestamp()
