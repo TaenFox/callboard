@@ -33,6 +33,22 @@ async def handle_board_command(message: Message):
         print(f"Ошибка при обработке команды /board: {e}")
         await message.reply("Произошла ошибка при создании доски.")
 
+# Обработчик команды /clearboard
+@dp.message(Command("clearboard"))
+async def handle_clearboard_command(message: Message):
+    try:
+        await clear()
+        try:
+            await bot.set_message_reaction(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                reaction=[ReactionTypeEmoji(emoji="👌")]
+            )
+        except Exception as e:
+            print(f"Ошибка при добавлении реакции: {e}")
+    except Exception as e:
+        print(f"Ошибка очистки доски: {e}")
+
 # Хендлер для сообщений
 @dp.message(F.text)
 async def handle_mention(message: Message):
@@ -73,10 +89,28 @@ def create_board(cards_data):
         result.append("")  # Пустая строка для разделения
     return "\n".join(result)
 
+async def clear():
+    callboard.clear()
+    print("Очистили доску")
+
+async def schedule_daily_clear():
+    """
+    Планировщик, вызывающий функцию clear раз в сутки.
+    """
+    while True:
+        try:
+            await clear()  # Вызов функции clear
+        except Exception as e:
+            print(f"Ошибка при вызове очистке доски: {e}")
+        
+        # Ожидание 24 часа
+        await asyncio.sleep(24 * 60 * 60)
+
 # Запуск бота
 async def main():
-    print("Бот запущен!")
     await dp.start_polling(bot)
+    asyncio.create_task(schedule_daily_clear())
+    print("Бот запущен!")
 
 if __name__ == "__main__":
     asyncio.run(main())
