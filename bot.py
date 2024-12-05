@@ -1,6 +1,6 @@
 import os
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import Message
+from aiogram.types import Message, ReactionTypeEmoji
 from aiogram.filters import Command
 from aiogram import F
 import re
@@ -38,8 +38,15 @@ async def handle_mention(message: Message):
         # Вызов функции add_card
         callboard.add_card(card)
         
-        # Ответ пользователю
-        await message.reply("Ваше сообщение обработано!")
+        # Оставляем реакцию "✍️" (пишущая рука) на сообщение
+        try:
+            await bot.set_message_reaction(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                reaction=[ReactionTypeEmoji(emoji="✍️")]  # Список реакций, поддерживаемых ботом
+            )
+        except Exception as e:
+            print(f"Ошибка при добавлении реакции: {e}")
 
 # Запуск бота
 async def main():
