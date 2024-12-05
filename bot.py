@@ -1,6 +1,6 @@
 import os
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import Message, ReactionTypeEmoji
+from aiogram.types import Message, ReactionTypeEmoji, BotCommand
 from aiogram.filters import Command
 from aiogram import F
 import re
@@ -8,6 +8,7 @@ import asyncio
 import callboard
 from model.card import Card
 import datetime as dt
+import uuid
 
 # Получение токена бота из переменной окружения
 TOKEN = os.environ.get("BOT_TOKEN")
@@ -19,7 +20,7 @@ if not TOKEN:
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Хендлер для сообщений, где упоминается бот
+# Хендлер для сообщений
 @dp.message(F.text)
 async def handle_mention(message: Message):
     bot_username = (await bot.get_me()).username
@@ -28,10 +29,10 @@ async def handle_mention(message: Message):
         hashtags = re.findall(r"#\w+", message.text)
         delete_time = dt.datetime.now() + dt.timedelta(days=1)
         card = Card()
-        card.card_id = message.message_id
-        card.message_id = message.message_id
-        card.chat_id = message.chat.id
-        card.text = message.text
+        card.card_id = str(uuid.uuid4())
+        card.message_id = str(message.message_id)
+        card.chat_id = str(message.chat.id)
+        card.text = str(message.text)
         card.delete_until = delete_time.timestamp()
         card.hashtags = hashtags
 
