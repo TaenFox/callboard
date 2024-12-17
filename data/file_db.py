@@ -3,6 +3,11 @@ import json, os, re
 class FileDataBase():
     def __init__(self, catalog:str) -> None:
         # self.catalog = f"{os.curdir}/data/{catalog}"
+        try:
+            if not os.path.isdir(catalog):
+                os.mkdir(catalog)
+        except Exception as e:
+            print(f"Каталог не существует и его невозможно создать: {e}")
         self.catalog = f"{catalog}"
 
 
