@@ -11,7 +11,7 @@ import datetime as dt
 import uuid
 
 # Получение токена бота из переменной окружения
-TOKEN = os.environ.get("BOT_TOKEN")
+TOKEN = os.environ.get("TOKEN_BOT_CALLBOARD")
 
 if not TOKEN:
     raise ValueError("Токен бота не найден. Убедитесь, что переменная окружения BOT_TOKEN установлена.")
