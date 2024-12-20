@@ -1,5 +1,5 @@
 from data.file_db import FileDataBase
-# import os
+import os
 
 class CardDTO():
     path: str
@@ -7,8 +7,7 @@ class CardDTO():
 
     def __init__(self, path:str = "") -> None:
         if path == "":
-            path = "./data/card"
-
+            path = os.path.dirname(__file__) + "/card"
         self.db = FileDataBase(path)
 
     def get_card_by_id(self, card_id:str)-> dict:
