@@ -27,6 +27,7 @@ def test_get_callboard_by_hashtag(temp_catalog_card):
             card.hashtags.append("common")
             card.delete_until = ""
             card.text = "Example text for list of cards in callboard"
+            card.has_link = False
             CardDTO(temp_catalog_card).add_card_by_id(card_id, card.to_dict())
 
     card_id = str(uuid.uuid4())
@@ -53,7 +54,8 @@ def test_cleaning_cards(temp_catalog_card):
                                  "chat_id": "1234",
                                  "text": "Example text for cleaning cards in callboard",
                                  "hashtags":[],
-                                 "delete_until": past_date_until.timestamp()
+                                 "delete_until": past_date_until.timestamp(),
+                                 "has_link": False
                              })
     callboard.clear(temp_catalog_card)
     result = CardDTO(temp_catalog_card).get_card_by_id(card_id)
@@ -65,7 +67,8 @@ def test_cleaning_cards(temp_catalog_card):
                                  "message_id": card_id,
                                  "text": "Example text for cleaning cards in callboard",
                                  "hashtags":[],
-                                 "delete_until": future_date_until.timestamp()
+                                 "delete_until": future_date_until.timestamp(),
+                                 "has_link": False
                              })
     callboard.clear(temp_catalog_card)    
     result = CardDTO(temp_catalog_card).get_card_by_id(card_id)

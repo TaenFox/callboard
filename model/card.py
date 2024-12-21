@@ -5,6 +5,7 @@ class Card():
     text:str
     hashtags:list
     delete_until:str
+    has_link:bool
 
     def __init__(self):
         self.card_id = ""
@@ -12,6 +13,7 @@ class Card():
         self.text = ""
         self.hashtags = []
         self.delete_until = ""
+        self.has_link = False
 
     def from_dict(self, data:dict):
         '''Заполняет модель card данными из словаря data'''
@@ -23,6 +25,7 @@ class Card():
             self.text = data['text']
             self.hashtags = data['hashtags']
             self.delete_until = data['delete_until']
+            self.has_link = data['has_link']
             return self
         except Exception as e:
             print(f"Can't use 'data' dictionary: {e}")
@@ -37,7 +40,8 @@ class Card():
                 "chat_id": self.chat_id,
                 "text": self.text,
                 "hashtags": self.hashtags,
-                "delete_until":self.delete_until
+                "delete_until":self.delete_until,
+                "has_link":self.has_link
             }
             return data
         except Exception as e:

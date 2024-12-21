@@ -3,6 +3,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message, ReactionTypeEmoji, BotCommand
 from aiogram.filters import Command
 from aiogram import F
+from aiogram.enums import ChatType
 import re
 import asyncio
 import callboard
@@ -64,6 +65,7 @@ async def handle_mention(message: Message):
         card.text = str(message.text)
         card.delete_until = delete_time.timestamp()
         card.hashtags = hashtags
+        card.has_link = can_generate_link(message)
 
         # Вызов функции add_card
         callboard.add_card(card)
@@ -75,19 +77,60 @@ async def handle_mention(message: Message):
                 message_id=message.message_id,
                 reaction=[ReactionTypeEmoji(emoji="✍️")]  # Список реакций, поддерживаемых ботом
             )
+            # if card.has_link:
+            #     chat_id = message.chat.id
+            #     message_id = message.message_id
+
+            #     # Формируем ссылку для супергрупп и групп
+            #     if message.chat.username:
+            #         link = f"https://t.me/{message.chat.username}/{message_id}"
+            #     else:
+            #         link = f"https://t.me/c/{str(chat_id).lstrip('-100')}/{message_id}"
+
+            #     await message.reply(f"Ссылка на это сообщение: {link}")
+            # else:
+            #     await message.reply("На это сообщение нельзя создать ссылку.")
         except Exception as e:
             print(f"Ошибка при добавлении реакции: {e}")
+
+def can_generate_link(message: Message) -> bool:
+    """
+    Проверяет, можно ли создать ссылку на сообщение.
+    
+    :param message: Объект сообщения.
+    :return: True, если можно создать ссылку; иначе False.
+    """
+    # Личные сообщения всегда возвращают False
+    if message.chat.type == ChatType.PRIVATE:
+        return False
+
+    # Группы и супергруппы позволяют создавать ссылки на сообщения
+    if message.chat.type in {ChatType.GROUP, ChatType.SUPERGROUP}:
+        if str(message.chat.id)[:4] != "-100" or message.chat.username in [None, ""]: return False
+        return True
+
+    # Каналы исключаются из проверки (в задаче указано)
+    if message.chat.type == ChatType.CHANNEL:
+        return False
+
+    return False
 
 def create_board(cards_data):
     result = []
     for hashtag, cards in cards_data.items():
         result.append(f"{hashtag}:")
         for card in cards:
-            text_preview = card["text"][:80] + ("..." if len(card["text"]) > 80 else "")
-            link = f"https://t.me/c/{str(card['chat_id'])}/{str(card['message_id'])}"  # Формат ссылки
-            result.append(f"- {text_preview.replace('@', '')} [ссылка]({link})")
+            result.append(format_card_text(card))
         result.append("")  # Пустая строка для разделения
     return "\n".join(result)
+
+def format_card_text(card:dict):
+    is_link_available = True
+    text_preview:str = card["text"][:80] + ("..." if len(card["text"]) > 80 else "")
+    first_word_space:int = text_preview.find(" ")
+
+    link = f"https://t.me/c/{str(card['chat_id'])}/{str(card['message_id'])}"  # Формат ссылки
+    return f"- {text_preview.replace('@', '')} [ссылка]({link})"
 
 async def clear():
     callboard.clear()
