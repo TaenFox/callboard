@@ -59,3 +59,62 @@ class CardDTO():
         except Exception as e:
             print(f"Error: {e}")
             return None
+        
+class ChatDTO():
+    path: str
+    db: FileDataBase
+
+    def __init__(self, path:str = "") -> None:
+        if path == "":
+            path = os.path.dirname(__file__) + "/chat"
+        self.db = FileDataBase(path)
+
+    def get_chat_by_id(self, chat_id:str)-> dict:
+        '''Получает словарь значений, соответствующих записи с id={chat_id}'''
+        try:
+            data = self.db.get_by_id(chat_id)
+            return data
+        except Exception as e:
+            print(f"Can't get chat by id = {chat_id}: {e}")
+            return None
+
+    def add_chat_by_id(self, chat_id:str, data:dict)-> dict:
+        '''Сохраняет словарь значений, переданных в словаре data. 
+        Сохраняется с id={chat_id}. Возвращает результат сохранения'''
+        try:
+            self.db.add_by_id(chat_id, data)
+            data = self.db.get_by_id(chat_id)
+            return data
+        except Exception as e:
+            print(f"Can't add chat by id = {chat_id}: {e}")
+            return None
+
+    def modify_chat_by_id(self, chat_id:str, data:dict)-> dict:
+        '''Заменяет словарь значений, переданных в словаре data в файле
+        с id={chat_id}. Возвращает результат сохранения'''
+        try:
+            self.db.modify_by_id(chat_id, data)
+            data = self.db.get_by_id(chat_id)
+            return data
+        except Exception as e:
+            print(f"Can't modify chat by id = {chat_id}: {e}")
+            return None
+        
+    def get_chat_list(self)->dict:
+        '''Возвращает список всех записей chat'''
+        try:
+            result = self.db.get_list()
+            return result
+        except Exception as e:
+            print("Can't return chat list")
+            return None
+        
+    def delete_chat_by_id(self, chat_id:str):
+        '''Удаляет указанную запись chat'''
+        try:
+            result = self.db.delete_by_id(chat_id)
+            if result==None: raise Exception("Can't delete chat")
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            return None

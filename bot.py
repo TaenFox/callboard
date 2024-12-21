@@ -8,6 +8,7 @@ import re
 import asyncio
 import callboard
 from model.card import Card
+from model.chat import Chat
 import datetime as dt
 import uuid
 
@@ -15,7 +16,7 @@ import uuid
 TOKEN = os.environ.get("TOKEN_BOT_CALLBOARD")
 
 if not TOKEN:
-    raise ValueError("Токен бота не найден. Убедитесь, что переменная окружения BOT_TOKEN установлена.")
+    raise ValueError("Токен бота не найден. Убедитесь, что переменная окружения TOKEN_BOT_CALLBOARD установлена.")
 
 # Инициализация бота и диспетчера
 bot = Bot(token=TOKEN)
@@ -58,10 +59,20 @@ async def handle_mention(message: Message):
         # Извлечение хэштегов
         hashtags = re.findall(r"#\w+", message.text)
         delete_time = dt.datetime.now() + dt.timedelta(days=1)
+        chat_dict = callboard.get_chat_by_external_id(str(message.chat.id))
+        chat = Chat()
+        if chat_dict != None: 
+            chat.from_dict(chat_dict)
+        else:
+            chat.external_chat_id = str(message.chat.id)
+            chat.internal_chat_id = str(uuid.uuid4())
+            chat.chat_name = message.chat.full_name
+            callboard.add_chat(chat)
+
         card = Card()
         card.card_id = str(uuid.uuid4())
         card.message_id = str(message.message_id)
-        card.chat_id = str(message.chat.id)
+        card.chat_id = chat.internal_chat_id
         card.text = str(message.text)
         card.delete_until = delete_time.timestamp()
         card.hashtags = hashtags
