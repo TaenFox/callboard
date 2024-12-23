@@ -47,15 +47,19 @@ def test_cleaning_cards(temp_catalog_card):
     card_id = str(uuid.uuid4())
     past_date_until = datetime.datetime.now() - datetime.timedelta(hours=1)
     future_date_until = datetime.datetime.now() + datetime.timedelta(hours=1)
+    current_date = datetime.datetime.now()
     CardDTO(temp_catalog_card).add_card_by_id(card_id, \
                              {
                                  "card_id": card_id,
                                  "message_id": card_id,
                                  "chat_id": "1234",
+                                 "internal_chat_id": "2345678",
                                  "text": "Example text for cleaning cards in callboard",
                                  "hashtags":[],
                                  "delete_until": past_date_until.timestamp(),
-                                 "has_link": False
+                                 "publish_date": current_date.timestamp(),
+                                 "has_link": False,
+                                 "link": ""
                              })
     callboard.clear(temp_catalog_card)
     result = CardDTO(temp_catalog_card).get_card_by_id(card_id)
@@ -65,10 +69,14 @@ def test_cleaning_cards(temp_catalog_card):
                              {
                                  "card_id": card_id,
                                  "message_id": card_id,
+                                 "chat_id": "1234",
+                                 "internal_chat_id": "2345678",
                                  "text": "Example text for cleaning cards in callboard",
                                  "hashtags":[],
                                  "delete_until": future_date_until.timestamp(),
-                                 "has_link": False
+                                 "publish_date": current_date.timestamp(),
+                                 "has_link": False,
+                                 "link": ""
                              })
     callboard.clear(temp_catalog_card)    
     result = CardDTO(temp_catalog_card).get_card_by_id(card_id)

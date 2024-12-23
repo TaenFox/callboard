@@ -55,10 +55,8 @@ async def handle_clearboard_command(message: Message):
 @dp.message(F.text)
 async def handle_mention(message: Message):
     bot_username = (await bot.get_me()).username
+
     if f"@{bot_username}" in message.text:
-        # Извлечение хэштегов
-        hashtags = re.findall(r"#\w+", message.text)
-        delete_time = dt.datetime.now() + dt.timedelta(days=1)
         chat_dict = callboard.get_chat_by_external_id(str(message.chat.id))
         chat = Chat()
         if chat_dict != None: 
@@ -69,14 +67,24 @@ async def handle_mention(message: Message):
             chat.chat_name = message.chat.full_name
             callboard.add_chat(chat)
 
+        hashtags = re.findall(r"#\w+", message.text)
+        card_text = create_card_text(str(message.text), bot_username, hashtags)
+        delete_time = dt.datetime.now() + dt.timedelta(hours=chat.removing_offset)
+
         card = Card()
         card.card_id = str(uuid.uuid4())
         card.message_id = str(message.message_id)
-        card.chat_id = chat.internal_chat_id
-        card.text = str(message.text)
+        card.chat_id = chat.external_chat_id
+        card.internal_chat_id = chat.internal_chat_id
+        card.text = card_text
         card.delete_until = delete_time.timestamp()
+        card.publish_date = dt.datetime.now().timestamp()
         card.hashtags = hashtags
-        card.has_link = can_generate_link(message)
+        link = can_generate_link(message)
+        if link == False: card.has_link = False
+        else:
+            card.has_link = True
+            card.link = link
 
         # Вызов функции add_card
         callboard.add_card(card)
@@ -107,9 +115,7 @@ async def handle_mention(message: Message):
 def can_generate_link(message: Message) -> bool:
     """
     Проверяет, можно ли создать ссылку на сообщение.
-    
-    :param message: Объект сообщения.
-    :return: True, если можно создать ссылку; иначе False.
+    Может вернуть либо False, либо ссылку
     """
     # Личные сообщения всегда возвращают False
     if message.chat.type == ChatType.PRIVATE:
@@ -118,13 +124,28 @@ def can_generate_link(message: Message) -> bool:
     # Группы и супергруппы позволяют создавать ссылки на сообщения
     if message.chat.type in {ChatType.GROUP, ChatType.SUPERGROUP}:
         if str(message.chat.id)[:4] != "-100" or message.chat.username in [None, ""]: return False
-        return True
+        external_chat_id = str(message.chat.id)
+        if external_chat_id[:4] == "-100": external_chat_id = external_chat_id[4:]
+        link = f"https://t.me/c/{external_chat_id}/{str(message.message_id)}"
+        return link
 
     # Каналы исключаются из проверки (в задаче указано)
     if message.chat.type == ChatType.CHANNEL:
         return False
 
     return False
+
+def create_card_text(original_text:str, botname:str, hashtags:list):
+    '''Функция используется для формирования текста для card. Этот текст будет сохранён'''
+    output = original_text
+    output = output.replace("@"+botname, "")
+    for hashtag in hashtags:
+        output = output.replace(hashtag, "") # символ "#" включен в хештег
+    while "  " in output:
+        output = output.replace("  ", " ")
+    if output[0]==" ": output=output[1:]
+    if output[len(output)-1]==" ": output=output[:len(output)-1]
+    return output
 
 def create_board(cards_data):
     result = []
@@ -136,12 +157,12 @@ def create_board(cards_data):
     return "\n".join(result)
 
 def format_card_text(card:dict):
-    is_link_available = True
+    '''Функция используется для вывода текста card в сообщение отчёёт /board'''
+    datetime_card = dt.datetime.fromtimestamp(card['publish_date'])
+    datetime_card_formated = datetime_card.strftime("%H:%M %d.%m")
+    if card['has_link']: datetime_card_formated = f"[{datetime_card_formated}]({card['link']})"
     text_preview:str = card["text"][:80] + ("..." if len(card["text"]) > 80 else "")
-    first_word_space:int = text_preview.find(" ")
-
-    link = f"https://t.me/c/{str(card['chat_id'])}/{str(card['message_id'])}"  # Формат ссылки
-    return f"- {text_preview.replace('@', '')} [ссылка]({link})"
+    return f"{datetime_card_formated} {text_preview}"
 
 async def clear():
     callboard.clear()
