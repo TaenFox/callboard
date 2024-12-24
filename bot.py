@@ -1,6 +1,7 @@
 import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message, ReactionTypeEmoji, BotCommand
+from aiogram.types.chat_administrator_rights import ChatAdministratorRights
 from aiogram.filters import Command
 from aiogram import F
 from aiogram.enums import ChatType
@@ -50,6 +51,36 @@ async def handle_clearboard_command(message: Message):
             print(f"Ошибка при добавлении реакции: {e}")
     except Exception as e:
         print(f"Ошибка очистки доски: {e}")
+
+@dp.message(Command("setremoveoffset"))
+async def handle_setremoveoffset_command(message: Message):
+    '''Сохраняет настройку времени, которая сохраняется в карточки для удаления'''
+    if not await is_user_admin(message.chat.id, message.from_user.id):
+        await message.reply("Действие доступно только администратору")
+        return
+    chat_dict = callboard.get_chat_by_external_id(str(message.chat.id))
+    chat = Chat()
+    if chat_dict != None: 
+        chat.from_dict(chat_dict)
+    else:
+        chat.external_chat_id = str(message.chat.id)
+        chat.internal_chat_id = str(uuid.uuid4())
+        chat.chat_name = message.chat.full_name
+        callboard.add_chat(chat)
+    try:
+        argument = message.text
+        argument = argument.replace(f"/setremoveoffset@{(await bot.get_me()).username}", "")
+        argument = argument.replace("/setremoveoffset", "")
+        offset = int(argument)
+        if offset <= 0: 
+            await message.reply(f"Укажите положительное число часов. Вы указали `{argument}`", parse_mode="Markdown")
+            return
+        chat.removing_offset = offset
+        callboard.modify_chat(chat)
+        await message.reply(f"Установлено время удаления: новые объявления будут удаляться через `{offset}` часов", parse_mode="Markdown")
+    except Exception as e:
+        print(f"Ошибка при установке времени удаления: {e}")
+        await message.reply("Ошибка при установке времени удаления")
 
 # Хендлер для сообщений
 @dp.message(F.text)
@@ -168,6 +199,14 @@ def format_card_text(card:dict):
 async def clear():
     callboard.clear()
     print("Очистили доску")
+
+async def is_user_admin(chat_id: int, user_id: int) -> bool:
+    try:
+        member = await bot.get_chat_member(chat_id, user_id)
+        return member.status in ["administrator", "creator"]
+    except Exception as e:
+        print(f"Ошибка при определении статуса пользователя: {e}")
+        return False
 
 async def schedule_daily_clear():
     """

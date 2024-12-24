@@ -100,7 +100,7 @@ def test_cleaning_cards(temp_catalog_card):
     result = CardDTO(temp_catalog_card).get_card_by_id(card_id)
     assert result!=None
 
-def test_add_and_get_chat(temp_catalog_chat):
+def test_add_modify_and_get_chat(temp_catalog_chat):
     '''Тест проверяет функцию добавления и получения 
     списка чатов: 
     - добавляет 4 чата
@@ -126,3 +126,12 @@ def test_add_and_get_chat(temp_catalog_chat):
         result_external_chat_id = callboard.get_chat_by_external_id(reference + "1234567890", temp_catalog_chat)
         assert result_inteenal_chat_id!=None
         assert result_external_chat_id!=None
+    
+    modified_chat_id = chat_id_list[0]
+    chat_data = callboard.get_chat_by_internal_id(modified_chat_id, temp_catalog_chat)
+    modified_chat_data = chat_data.copy()
+    modified_chat_data['removing_offset'] = 0
+    callboard.modify_chat(Chat().from_dict(modified_chat_data), temp_catalog_chat)
+    result_chat_data = callboard.get_chat_by_internal_id(modified_chat_id, temp_catalog_chat)
+    assert result_chat_data != None
+    assert chat_data != result_chat_data

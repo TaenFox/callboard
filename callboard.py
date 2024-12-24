@@ -110,3 +110,13 @@ def add_chat(new_chat:Chat, path:str = ""):
     except Exception as e:
         print(e)
         return None
+    
+def modify_chat(chat:Chat, path:str = ""):
+    '''Изменить настройки чата'''
+    try:
+        result = ChatDTO(path).modify_chat_by_id(chat.internal_chat_id, chat.to_dict())
+        if result == None: raise Exception("Can't modify chat")
+        return result
+    except Exception as e:
+        print(e)
+        return None
