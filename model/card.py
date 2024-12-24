@@ -1,6 +1,7 @@
 class Card():
     card_id:str
     message_id:str
+    external_user_id:str
     chat_id:str
     internal_chat_id:str
     text:str
@@ -13,6 +14,7 @@ class Card():
     def __init__(self):
         self.card_id = ""
         self.message_id = ""
+        self.external_user_id = ""
         self.chat_id = ""
         self.internal_chat_id = ""
         self.text = ""
@@ -28,6 +30,7 @@ class Card():
         try:
             self.card_id = data['card_id']
             self.message_id = data['message_id']
+            self.external_user_id = data['external_user_id']
             self.chat_id = data['chat_id']
             self.internal_chat_id = data['internal_chat_id']
             self.text = data['text']
@@ -47,6 +50,7 @@ class Card():
             data = {
                 "card_id": self.card_id,
                 "message_id": self.message_id,
+                "external_user_id": self.external_user_id,
                 "chat_id": self.chat_id,
                 "internal_chat_id": self.internal_chat_id,
                 "text": self.text,

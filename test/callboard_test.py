@@ -37,6 +37,7 @@ def test_get_callboard_by_hashtag(temp_catalog_card):
             card = Card()
             card.card_id = card_id
             card.message_id = card_id
+            card.external_user_id = "1234567890"
             card.hashtags.append(hashtag)
             card.hashtags.append("common")
             card.delete_until = ""

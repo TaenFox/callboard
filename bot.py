@@ -74,6 +74,7 @@ async def handle_mention(message: Message):
         card = Card()
         card.card_id = str(uuid.uuid4())
         card.message_id = str(message.message_id)
+        card.external_user_id = str(message.from_user.id)
         card.chat_id = chat.external_chat_id
         card.internal_chat_id = chat.internal_chat_id
         card.text = card_text
