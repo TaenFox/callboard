@@ -31,7 +31,7 @@ def list_card(path:str = "", chat_id:str = "", by_hashtag:bool = True):
         try:
             callboard_by_hashtags = {}
             for card_dict in result:
-                card = Card(path)
+                card = Card()
                 card.from_dict(card_dict)
                 if len(card.hashtags)==0: 
                     card.hashtags.append("no hashtag")
@@ -69,7 +69,7 @@ def clear(path:str = ""):
     try:
         for card_dict in card_list:
             try:
-                card = Card(path).from_dict(card_dict)
+                card = Card().from_dict(card_dict)
                 card_time = dt.fromtimestamp(card.delete_until)
                 if card_time < dt.now(): 
                     CardDTO(path).delete_card_by_id(card.card_id)
