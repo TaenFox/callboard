@@ -7,13 +7,16 @@ from model.card import Card
 from model.chat import Chat
 import re
 
-def create_board(cards_data) -> str:
+def create_board(cards_data, external_chat_id:str) -> str:
     result = []
     for hashtag, cards in cards_data.items():
         result.append(f"{hashtag}:")
         for card in cards:
             result.append(format_card_text(card))
         result.append("")  # Пустая строка для разделения
+    chat = Chat().from_dict(callboard.get_chat_by_external_id(external_chat_id))
+    chat.last_publish = dt.datetime.now().timestamp()
+    callboard.modify_chat(chat)
     return "\n".join(result)
 
 
@@ -48,11 +51,11 @@ def can_generate_link(message: Message) -> bool:
     if message_url == None: return False
     return message_url
 
-def set_remove_offset(message_text:str, chat_id:str, chat_name:str, bot_name:str):
+def set_remove_offset(message_text:str, chat_id:str, chat_name:str, bot_name:str, path_chat:str=""):
     '''Функция проверяет аргументы вызова команды изменения 
     настройки удаления объявлений, если валидные - сохраняет 
     и возвращает текст для отправки в чат'''
-    chat_dict = callboard.get_chat_by_external_id(chat_id, )
+    chat_dict = callboard.get_chat_by_external_id(chat_id, path_chat)
     chat = Chat()
     if chat_dict != None: 
         chat.from_dict(chat_dict)
@@ -60,7 +63,7 @@ def set_remove_offset(message_text:str, chat_id:str, chat_name:str, bot_name:str
         chat.external_chat_id = chat_id
         chat.internal_chat_id = str(uuid.uuid4())
         chat.chat_name = chat_name
-        callboard.add_chat(chat)
+        callboard.add_chat(chat, path_chat)
     try:
         argument = message_text
         argument = argument.replace(f"/setremoveoffset@{bot_name}", "")
@@ -75,7 +78,36 @@ def set_remove_offset(message_text:str, chat_id:str, chat_name:str, bot_name:str
         return f"Установлено время удаления: новые объявления будут удаляться через `{offset}` часов"
     except Exception as e:
         print(f"Ошибка при установке времени удаления: {e}")
-        return "Ошибка при установке времени удаления"
+        return "Ошибка при установке времени удаления. Убедитесь, что пишете целое число часов для настройки и не указываете других символов"
+
+def set_publish_offset(message_text:str, chat_id:str, chat_name:str, bot_name:str, path_chat:str=""):
+    '''Функция проверяет аргументы вызова команды изменения 
+    настройки публикации автоматического сообщения, если валидные - сохраняет 
+    и возвращает текст для отправки в чат'''
+    chat_dict = callboard.get_chat_by_external_id(chat_id, path_chat)
+    chat = Chat()
+    if chat_dict != None: 
+        chat.from_dict(chat_dict)
+    else:
+        chat.external_chat_id = chat_id
+        chat.internal_chat_id = str(uuid.uuid4())
+        chat.chat_name = chat_name
+        callboard.add_chat(chat, path_chat)
+    try:
+        argument = message_text
+        argument = argument.replace(f"/setpublishoffset@{bot_name}", "")
+        argument = argument.replace("/setpublishoffset", "")
+        if argument[0]==" ": argument=argument[1:]
+        if argument[len(argument)-1]==" ": argument=argument[:len(argument)-1]
+        offset = int(argument)  #TODO тут нужно пофиксить если нет чисел
+        if offset <= 0: 
+            return f"Укажите положительное число часов. Вы указали `{argument}`"
+        chat.republish_offset = offset
+        callboard.modify_chat(chat)
+        return f"Установлено время публикации: через `{offset}` часов"
+    except Exception as e:
+        print(f"Ошибка при установке времени публикации: {e}")
+        return "Ошибка при установке времени публикации. Убедитесь, что пишете целое число часов для настройки и не указываете других символов"
     
 def record_card(message:Message, bot_username:str, path_card:str="", path_chat:str = ""):
     try:
