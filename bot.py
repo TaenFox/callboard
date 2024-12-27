@@ -132,8 +132,8 @@ async def schedule_daily_clear():
         except Exception as e:
             print(f"Ошибка при вызове очистке доски: {e}")
         
-        # Ожидание 24 часа
-        await asyncio.sleep(10)
+        # Ожидание 5 минут
+        await asyncio.sleep(360)
 
 # Запуск бота
 async def main():
