@@ -122,6 +122,7 @@ def test_add_modify_and_get_chat(temp_catalog_chat):
         chat.internal_chat_id = chat_id
         chat.chat_name = f"Chat {str(i)}"
         chat.republish_offset = 24
+        chat.last_publish = datetime.datetime.now().timestamp()
         chat.removing_offset = 24
         chat.need_to_pin = False
         chat.previous_pin_id = None

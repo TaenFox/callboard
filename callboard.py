@@ -1,7 +1,7 @@
 from data.interface_db import CardDTO, ChatDTO
 from model.card import Card
 from model.chat import Chat
-from datetime import datetime as dt
+import datetime as dt
 
 def add_card(new_card:Card, path:str = ""):
     '''Добавить новую запись card'''
@@ -63,6 +63,16 @@ def list_card(path:str = "", chat_id:str = "", by_hashtag:bool = True):
         print(f"Error while combine card list: {e}")
         return None
 
+def list_chat(path:str = ""):
+    '''Получить список всех записей chat'''
+    try:
+        result = ChatDTO(path).get_chat_list()
+        if result == None: raise Exception("No chat list!")
+        return result
+    except Exception as e:
+        print(e)
+        return None
+
 def clear(path:str = ""):
     '''Очистить устаревшие card'''
     card_list = list_card(path, by_hashtag=False)
@@ -70,8 +80,8 @@ def clear(path:str = ""):
         for card_dict in card_list:
             try:
                 card = Card().from_dict(card_dict)
-                card_time = dt.fromtimestamp(card.delete_until)
-                if card_time < dt.now(): 
+                card_time = dt.datetime.fromtimestamp(card.delete_until)
+                if card_time < dt.datetime.now(): 
                     CardDTO(path).delete_card_by_id(card.card_id)
             except Exception as e:
                 print(f"Can't parse date. This card has been removed: {card_dict}")
@@ -80,6 +90,23 @@ def clear(path:str = ""):
     except Exception as e:
         print(f"Can't complete cleaning: {e}")
         return False
+
+def republic_chat_list(path_chat:str = ""):
+    '''Выполнить повторную публикацию сообщений с объявлениями'''
+    chat_list = list_chat(path_chat)
+    chats_to_republic = []
+    try:
+        for chat_dict in chat_list:
+            if "republish_offset" not in chat_dict or chat_dict["republish_offset"] == None: 
+                chats_to_republic.append(chat_dict)
+                next
+            last_publish_date = dt.datetime.fromtimestamp(chat_dict["last_publish"])
+            publish_until = last_publish_date + dt.timedelta(hours=chat_dict["republish_offset"])
+            if publish_until < dt.datetime.now(): chats_to_republic.append(chat_dict)
+        return chats_to_republic
+    except Exception as e:
+        print(f"Can't prepare list of chats to republic: {e}")
+        return []
 
 def get_chat_by_external_id(external_chat_id:str, path:str = ""):
     '''Получить чат по идентификатору из телеграм'''

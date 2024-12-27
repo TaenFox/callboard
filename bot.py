@@ -24,7 +24,7 @@ async def handle_board_command(message: Message):
         cards_data = callboard.list_card(chat_id=str(message.chat.id))
         if len(cards_data)==0: await message.reply("Нет актуальных объявлений")
         else:
-            board_text = bot_functions.create_board(cards_data)
+            board_text = bot_functions.create_board(cards_data, str(message.chat.id))
             await message.reply(board_text, parse_mode="Markdown")
     except Exception as e:
         print(f"Ошибка при обработке команды /board: {e}")
@@ -60,6 +60,19 @@ async def handle_setremoveoffset_command(message: Message):
                                              bot_name)
     await message.reply(answer)
 
+@dp.message(Command("setpublishoffset"))
+async def handle_setpublishoffset_command(message: Message):
+    '''Сохраняет настройку времени через сколько нужно запостить новое сообщение в канал и почистить доску'''
+    if not await is_user_admin(message.chat.id, message.from_user.id):
+        await message.reply("Действие доступно только администратору")
+        return
+    bot_name = (await bot.get_me()).username
+    answer = bot_functions.set_publish_offset(message.text,
+                                             str(message.chat.id),
+                                             message.chat.full_name,
+                                             bot_name)
+    await message.reply(answer)
+
 # Хендлер для сообщений
 @dp.message(F.text)
 async def handle_mention(message: Message):
@@ -86,14 +99,25 @@ async def handle_mention(message: Message):
 
 
 async def clear():
-    result = callboard.clear()
-    print("Очистили доску")
-    return result
+    callboard.clear()
+    chats_to_republic = callboard.republic_chat_list()
+    for chat_dict in chats_to_republic:
+        text_message = bot_functions.create_board(
+                callboard.list_card(chat_id=chat_dict["external_chat_id"]),
+                chat_dict["external_chat_id"])
+        if text_message != "": 
+            sent_message = await bot.send_message(
+                chat_id=chat_dict["external_chat_id"], 
+                text=text_message)
+            await bot.pin_message(chat_id=chat_dict["external_chat_id"], message_id=sent_message.message_id)
+    #print("Очистили доску")
 
 async def is_user_admin(chat_id: int, user_id: int) -> bool:
     try:
         member = await bot.get_chat_member(chat_id, user_id)
-        return member.status in ["administrator", "creator"]
+        chat = await bot.get_chat(chat_id)
+        return member.status in ["administrator", "creator"] \
+            or chat.type == "private"
     except Exception as e:
         print(f"Ошибка при определении статуса пользователя: {e}")
         return False
@@ -109,13 +133,13 @@ async def schedule_daily_clear():
             print(f"Ошибка при вызове очистке доски: {e}")
         
         # Ожидание 24 часа
-        await asyncio.sleep(24 * 60 * 60)
+        await asyncio.sleep(10)
 
 # Запуск бота
 async def main():
     print("Бот запущен!")
-    await dp.start_polling(bot)
     asyncio.create_task(schedule_daily_clear())
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
