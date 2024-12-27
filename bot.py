@@ -1,20 +1,17 @@
 import os
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from aiogram.types import Message, ReactionTypeEmoji, BotCommand
 from aiogram.filters import Command
 from aiogram import F
-import re
 import asyncio
 import callboard
-from model.card import Card
-import datetime as dt
-import uuid
+import bot_functions
 
 # Получение токена бота из переменной окружения
 TOKEN = os.environ.get("TOKEN_BOT_CALLBOARD")
 
 if not TOKEN:
-    raise ValueError("Токен бота не найден. Убедитесь, что переменная окружения BOT_TOKEN установлена.")
+    raise ValueError("Токен бота не найден. Убедитесь, что переменная окружения TOKEN_BOT_CALLBOARD установлена.")
 
 # Инициализация бота и диспетчера
 bot = Bot(token=TOKEN)
@@ -27,7 +24,7 @@ async def handle_board_command(message: Message):
         cards_data = callboard.list_card(chat_id=str(message.chat.id))
         if len(cards_data)==0: await message.reply("Нет актуальных объявлений")
         else:
-            board_text = create_board(cards_data)
+            board_text = bot_functions.create_board(cards_data)
             await message.reply(board_text, parse_mode="Markdown")
     except Exception as e:
         print(f"Ошибка при обработке команды /board: {e}")
@@ -37,7 +34,8 @@ async def handle_board_command(message: Message):
 @dp.message(Command("clearboard"))
 async def handle_clearboard_command(message: Message):
     try:
-        await clear()
+        result = await clear()
+        if result == False: raise Exception()
         try:
             await bot.set_message_reaction(
                 chat_id=message.chat.id,
@@ -49,49 +47,56 @@ async def handle_clearboard_command(message: Message):
     except Exception as e:
         print(f"Ошибка очистки доски: {e}")
 
+@dp.message(Command("setremoveoffset"))
+async def handle_setremoveoffset_command(message: Message):
+    '''Сохраняет настройку времени, которая сохраняется в карточки для удаления'''
+    if not await is_user_admin(message.chat.id, message.from_user.id):
+        await message.reply("Действие доступно только администратору")
+        return
+    bot_name = (await bot.get_me()).username
+    answer = bot_functions.set_remove_offset(message.text,
+                                             str(message.chat.id),
+                                             message.chat.full_name,
+                                             bot_name)
+    await message.reply(answer)
+
 # Хендлер для сообщений
 @dp.message(F.text)
 async def handle_mention(message: Message):
     bot_username = (await bot.get_me()).username
-    if f"@{bot_username}" in message.text:
-        # Извлечение хэштегов
-        hashtags = re.findall(r"#\w+", message.text)
-        delete_time = dt.datetime.now() + dt.timedelta(days=1)
-        card = Card()
-        card.card_id = str(uuid.uuid4())
-        card.message_id = str(message.message_id)
-        card.chat_id = str(message.chat.id)
-        card.text = str(message.text)
-        card.delete_until = delete_time.timestamp()
-        card.hashtags = hashtags
 
-        # Вызов функции add_card
-        callboard.add_card(card)
+    if f"@{bot_username}" in message.text:
+        result = bot_functions.record_card(message, bot_username)
         
-        # Оставляем реакцию "✍️" (пишущая рука) на сообщение
         try:
-            await bot.set_message_reaction(
-                chat_id=message.chat.id,
-                message_id=message.message_id,
-                reaction=[ReactionTypeEmoji(emoji="✍️")]  # Список реакций, поддерживаемых ботом
-            )
+            if result == True:
+                await bot.set_message_reaction(
+                    chat_id=message.chat.id,
+                    message_id=message.message_id,
+                    reaction=[ReactionTypeEmoji(emoji="✍️")]
+                )
+            else:
+                await bot.set_message_reaction(
+                    chat_id=message.chat.id,
+                    message_id=message.message_id,
+                    reaction=[ReactionTypeEmoji(emoji="🤷")]
+                )
         except Exception as e:
             print(f"Ошибка при добавлении реакции: {e}")
 
-def create_board(cards_data):
-    result = []
-    for hashtag, cards in cards_data.items():
-        result.append(f"{hashtag}:")
-        for card in cards:
-            text_preview = card["text"][:80] + ("..." if len(card["text"]) > 80 else "")
-            link = f"https://t.me/c/{str(card['chat_id'])}/{str(card['message_id'])}"  # Формат ссылки
-            result.append(f"- {text_preview.replace('@', '')} [ссылка]({link})")
-        result.append("")  # Пустая строка для разделения
-    return "\n".join(result)
 
 async def clear():
-    callboard.clear()
+    result = callboard.clear()
     print("Очистили доску")
+    return result
+
+async def is_user_admin(chat_id: int, user_id: int) -> bool:
+    try:
+        member = await bot.get_chat_member(chat_id, user_id)
+        return member.status in ["administrator", "creator"]
+    except Exception as e:
+        print(f"Ошибка при определении статуса пользователя: {e}")
+        return False
 
 async def schedule_daily_clear():
     """

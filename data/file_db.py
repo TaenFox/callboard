@@ -90,3 +90,14 @@ class FileDataBase():
         except Exception as e:
             print(f"Can't delete file '{self.catalog}/{id}.json': {e}")
             return None
+        
+if __name__ == "__main__":
+    catalogs = os.listdir(os.path.dirname(__file__))
+    for table in catalogs:
+        if "." in table: continue
+        print(f'=={table}==')
+        for item_name in os.listdir(os.path.dirname(__file__)+ "/" + table):
+            item_path = f"{os.path.dirname(__file__)}/{table}/{item_name}"
+            with open(\
+                item_path, "r", encoding="utf-8") as json_file:
+                print(json.load(json_file))
