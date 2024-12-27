@@ -15,7 +15,7 @@ def create_board(cards_data, external_chat_id:str) -> str:
             result.append(format_card_text(card))
         result.append("")  # Пустая строка для разделения
     chat = Chat().from_dict(callboard.get_chat_by_external_id(external_chat_id))
-    chat.last_published = dt.datetime.now().timestamp()
+    chat.last_publish = dt.datetime.now().timestamp()
     callboard.modify_chat(chat)
     return "\n".join(result)
 
@@ -78,7 +78,7 @@ def set_remove_offset(message_text:str, chat_id:str, chat_name:str, bot_name:str
         return f"Установлено время удаления: новые объявления будут удаляться через `{offset}` часов"
     except Exception as e:
         print(f"Ошибка при установке времени удаления: {e}")
-        return "Ошибка при установке времени удаления"
+        return "Ошибка при установке времени удаления. Убедитесь, что пишете целое число часов для настройки и не указываете других символов"
 
 def set_publish_offset(message_text:str, chat_id:str, chat_name:str, bot_name:str, path_chat:str=""):
     '''Функция проверяет аргументы вызова команды изменения 
@@ -107,7 +107,7 @@ def set_publish_offset(message_text:str, chat_id:str, chat_name:str, bot_name:st
         return f"Установлено время публикации: через `{offset}` часов"
     except Exception as e:
         print(f"Ошибка при установке времени публикации: {e}")
-        return "Ошибка при установке времени публикации"
+        return "Ошибка при установке времени публикации. Убедитесь, что пишете целое число часов для настройки и не указываете других символов"
     
 def record_card(message:Message, bot_username:str, path_card:str="", path_chat:str = ""):
     try:
