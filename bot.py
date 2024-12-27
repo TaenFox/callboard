@@ -24,7 +24,7 @@ async def handle_board_command(message: Message):
         cards_data = callboard.list_card(chat_id=str(message.chat.id))
         if len(cards_data)==0: await message.reply("Нет актуальных объявлений")
         else:
-            board_text = bot_functions.create_board(cards_data)
+            board_text = bot_functions.create_board(cards_data, str(message.chat.id))
             await message.reply(board_text, parse_mode="Markdown")
     except Exception as e:
         print(f"Ошибка при обработке команды /board: {e}")

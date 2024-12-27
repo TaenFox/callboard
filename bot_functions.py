@@ -7,13 +7,16 @@ from model.card import Card
 from model.chat import Chat
 import re
 
-def create_board(cards_data) -> str:
+def create_board(cards_data, external_chat_id:str) -> str:
     result = []
     for hashtag, cards in cards_data.items():
         result.append(f"{hashtag}:")
         for card in cards:
             result.append(format_card_text(card))
         result.append("")  # Пустая строка для разделения
+    chat = Chat().from_dict(callboard.get_chat_by_external_id(external_chat_id))
+    chat.last_published = dt.datetime.now().timestamp()
+    callboard.modify_chat(chat)
     return "\n".join(result)
 
 
