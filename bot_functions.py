@@ -48,11 +48,11 @@ def can_generate_link(message: Message) -> bool:
     if message_url == None: return False
     return message_url
 
-def set_remove_offset(message_text:str, chat_id:str, chat_name:str, bot_name:str):
+def set_remove_offset(message_text:str, chat_id:str, chat_name:str, bot_name:str, path_chat:str=""):
     '''Функция проверяет аргументы вызова команды изменения 
     настройки удаления объявлений, если валидные - сохраняет 
     и возвращает текст для отправки в чат'''
-    chat_dict = callboard.get_chat_by_external_id(chat_id, )
+    chat_dict = callboard.get_chat_by_external_id(chat_id, path_chat)
     chat = Chat()
     if chat_dict != None: 
         chat.from_dict(chat_dict)
@@ -60,7 +60,7 @@ def set_remove_offset(message_text:str, chat_id:str, chat_name:str, bot_name:str
         chat.external_chat_id = chat_id
         chat.internal_chat_id = str(uuid.uuid4())
         chat.chat_name = chat_name
-        callboard.add_chat(chat)
+        callboard.add_chat(chat, path_chat)
     try:
         argument = message_text
         argument = argument.replace(f"/setremoveoffset@{bot_name}", "")
@@ -76,6 +76,35 @@ def set_remove_offset(message_text:str, chat_id:str, chat_name:str, bot_name:str
     except Exception as e:
         print(f"Ошибка при установке времени удаления: {e}")
         return "Ошибка при установке времени удаления"
+
+def set_publish_offset(message_text:str, chat_id:str, chat_name:str, bot_name:str, path_chat:str=""):
+    '''Функция проверяет аргументы вызова команды изменения 
+    настройки публикации автоматического сообщения, если валидные - сохраняет 
+    и возвращает текст для отправки в чат'''
+    chat_dict = callboard.get_chat_by_external_id(chat_id, path_chat)
+    chat = Chat()
+    if chat_dict != None: 
+        chat.from_dict(chat_dict)
+    else:
+        chat.external_chat_id = chat_id
+        chat.internal_chat_id = str(uuid.uuid4())
+        chat.chat_name = chat_name
+        callboard.add_chat(chat, path_chat)
+    try:
+        argument = message_text
+        argument = argument.replace(f"/setpublishoffset@{bot_name}", "")
+        argument = argument.replace("/setpublishoffset", "")
+        if argument[0]==" ": argument=argument[1:]
+        if argument[len(argument)-1]==" ": argument=argument[:len(argument)-1]
+        offset = int(argument)  #TODO тут нужно пофиксить если нет чисел
+        if offset <= 0: 
+            return f"Укажите положительное число часов. Вы указали `{argument}`"
+        chat.republish_offset = offset
+        callboard.modify_chat(chat)
+        return f"Установлено время публикации: через `{offset}` часов"
+    except Exception as e:
+        print(f"Ошибка при установке времени публикации: {e}")
+        return "Ошибка при установке времени публикации"
     
 def record_card(message:Message, bot_username:str, path_card:str="", path_chat:str = ""):
     try:

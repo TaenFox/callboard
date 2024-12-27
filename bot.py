@@ -60,6 +60,19 @@ async def handle_setremoveoffset_command(message: Message):
                                              bot_name)
     await message.reply(answer)
 
+@dp.message(Command("setpublishoffset"))
+async def handle_setpublishoffset_command(message: Message):
+    '''Сохраняет настройку времени через сколько нужно запостить новое сообщение в канал и почистить доску'''
+    if not await is_user_admin(message.chat.id, message.from_user.id):
+        await message.reply("Действие доступно только администратору")
+        return
+    bot_name = (await bot.get_me()).username
+    answer = bot_functions.set_publish_offset(message.text,
+                                             str(message.chat.id),
+                                             message.chat.full_name,
+                                             bot_name)
+    await message.reply(answer)
+
 # Хендлер для сообщений
 @dp.message(F.text)
 async def handle_mention(message: Message):

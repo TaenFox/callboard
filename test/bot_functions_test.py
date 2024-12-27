@@ -140,6 +140,28 @@ def test_set_remove_offset(temp_catalog_chat):
     assert len(result) > 0
     assert result == "Установлено время удаления: новые объявления будут удаляться через `1` часов"
 
+def test_set_republish_offset(temp_catalog_chat):
+    chat = CB_Chat()
+    chat.external_chat_id = "1234567890"
+    chat.internal_chat_id = "1234567890"
+    chat.chat_name = "Test chat"
+    chat.republish_offset = 24
+    chat.removing_offset = 24
+    chat.need_to_pin = False
+    chat.previous_pin_id = None
+    ChatDTO(temp_catalog_chat).add_chat_by_id(chat.external_chat_id, chat.to_dict())
+    chat_id = chat.external_chat_id
+    chat_name = chat.chat_name
+    bot_name = "testbot"
+
+    result = f.set_publish_offset("/setpublishoffset 0", chat_id, chat_name, bot_name)
+    assert len(result) > 0
+    assert result == "Укажите положительное число часов. Вы указали `0`"
+
+    result = f.set_publish_offset("/setpublishoffset 1", chat_id, chat_name, bot_name)
+    assert len(result) > 0
+    assert result == "Установлено время публикации: через `1` часов"
+
 def test_record_card(temp_catalog_card, temp_catalog_chat, temp_data_for_card):
     card = temp_data_for_card
     CardDTO(temp_catalog_card).add_card_by_id(card.card_id, card.to_dict())
