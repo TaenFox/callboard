@@ -1,3 +1,7 @@
+import sys 
+import os.path 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..") 
+
 from data.interface_db import CardDTO
 from data.interface_db import ChatDTO
 from model.card import Card
@@ -70,6 +74,7 @@ def test_cleaning_cards(temp_catalog_card):
                              {
                                  "card_id": card_id,
                                  "message_id": card_id,
+                                 "external_user_id": "12345",
                                  "chat_id": "1234",
                                  "internal_chat_id": "2345678",
                                  "text": "Example text for cleaning cards in callboard",

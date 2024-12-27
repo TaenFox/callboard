@@ -76,8 +76,10 @@ def clear(path:str = ""):
             except Exception as e:
                 print(f"Can't parse date. This card has been removed: {card_dict}")
                 CardDTO(path).delete_card_by_id(card.card_id)
+        return True
     except Exception as e:
         print(f"Can't complete cleaning: {e}")
+        return False
 
 def get_chat_by_external_id(external_chat_id:str, path:str = ""):
     '''Получить чат по идентификатору из телеграм'''
