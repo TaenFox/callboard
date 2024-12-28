@@ -88,21 +88,42 @@ async def handle_ban_command(message: Message):
     reply_text = bot_functions.ban_user(ban_user_id, str(message.chat.id), message.chat.full_name)
     await message.reply(reply_text)
 
+@dp.message(Command("unban"))
+async def handle_ban_command(message: Message):
+    '''Снимает ограничение на публикацию для пользователя'''
+    if not await is_user_admin(message.chat.id, message.from_user.id):
+        await message.reply("Действие доступно только администратору")
+        return
+    if message.reply_to_message == None:
+        await message.reply("Ответьте командой на сообщение пользователя, которого хотите разбанить")
+        return
+    unban_user_id= str(message.reply_to_message.from_user.id)
+    reply_text = bot_functions.unban_user(unban_user_id, str(message.chat.id), message.chat.full_name)
+    await message.reply(reply_text)
+
 # Хендлер для сообщений
 @dp.message(F.text)
 async def handle_mention(message: Message):
     bot_username = (await bot.get_me()).username
-
+    
     if f"@{bot_username}" in message.text:
         result = bot_functions.record_card(message, bot_username)
         
         try:
             if result == True:
-                await bot.set_message_reaction(
-                    chat_id=message.chat.id,
-                    message_id=message.message_id,
-                    reaction=[ReactionTypeEmoji(emoji="✍️")]
-                )
+                try:
+                    await bot.set_message_reaction(
+                        chat_id=message.chat.id,
+                        message_id=message.message_id,
+                        reaction=[ReactionTypeEmoji(emoji="✍️")]
+                    )
+                except:
+                    # Если вдруг этот эмодзи заблокирован в чате
+                    await bot.set_message_reaction(
+                        chat_id=message.chat.id,
+                        message_id=message.message_id,
+                        reaction=[ReactionTypeEmoji(emoji="👍")]
+                    )                    
             else:
                 await bot.set_message_reaction(
                     chat_id=message.chat.id,
