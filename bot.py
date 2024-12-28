@@ -73,6 +73,21 @@ async def handle_setpublishoffset_command(message: Message):
                                              bot_name)
     await message.reply(answer)
 
+@dp.message(Command("ban"))
+async def handle_ban_command(message: Message):
+    '''Ищет упоминание пользователя в команде, 
+    помещает его в чёрный список и 
+    удаляет его объявления в этом чате'''
+    if not await is_user_admin(message.chat.id, message.from_user.id):
+        await message.reply("Действие доступно только администратору")
+        return
+    if message.reply_to_message == None:
+        await message.reply("Ответьте командой на сообщение пользователя, которого хотите забанить")
+        return
+    ban_user_id= str(message.reply_to_message.from_user.id)
+    reply_text = bot_functions.ban_user(ban_user_id, str(message.chat.id), message.chat.full_name)
+    await message.reply(reply_text)
+
 # Хендлер для сообщений
 @dp.message(F.text)
 async def handle_mention(message: Message):
@@ -108,8 +123,9 @@ async def clear():
         if text_message != "": 
             sent_message = await bot.send_message(
                 chat_id=chat_dict["external_chat_id"], 
-                text=text_message)
-            await bot.pin_message(chat_id=chat_dict["external_chat_id"], message_id=sent_message.message_id)
+                text=text_message,
+                parse_mode="Markdown")
+            await bot.pin_chat_message(chat_id=chat_dict["external_chat_id"], message_id=sent_message.message_id)
     #print("Очистили доску")
 
 async def is_user_admin(chat_id: int, user_id: int) -> bool:
@@ -130,7 +146,7 @@ async def schedule_daily_clear():
         try:
             await clear()  # Вызов функции clear
         except Exception as e:
-            print(f"Ошибка при вызове очистке доски: {e}")
+            print(f"Ошибка при републикации: {e}")
         
         # Ожидание 5 минут
         await asyncio.sleep(360)
