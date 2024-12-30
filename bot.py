@@ -85,7 +85,7 @@ async def handle_ban_command(message: Message):
         await message.reply("Ответьте командой на сообщение пользователя, которого хотите забанить")
         return
     ban_user_id= str(message.reply_to_message.from_user.id)
-    reply_text = bot_functions.ban_user(ban_user_id, str(message.chat.id), message.chat.full_name)
+    reply_text = callboard.ban_user(ban_user_id, str(message.chat.id))
     await message.reply(reply_text)
 
 @dp.message(Command("unban"))
@@ -98,7 +98,7 @@ async def handle_ban_command(message: Message):
         await message.reply("Ответьте командой на сообщение пользователя, которого хотите разбанить")
         return
     unban_user_id= str(message.reply_to_message.from_user.id)
-    reply_text = bot_functions.unban_user(unban_user_id, str(message.chat.id), message.chat.full_name)
+    reply_text = callboard.unban_user(unban_user_id, str(message.chat.id), message.chat.full_name)
     await message.reply(reply_text)
 
 # Хендлер для сообщений

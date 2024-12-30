@@ -9,6 +9,11 @@ from model.chat import Chat
 import callboard
 import pytest
 import uuid, datetime
+import datetime as dt
+# import debugpy
+# debugpy.listen(("0.0.0.0", 5678))  # Укажите порт
+# print("Waiting for debugger to attach...")
+# debugpy.wait_for_client()
 
 @pytest.fixture()
 def temp_catalog_card(tmp_path):
@@ -159,7 +164,7 @@ def test_delete_user_cards(temp_catalog_card):
         card.message_id = card_id
         card.external_user_id = user_id
         card.chat_id = chat_id
-        card.internal_chat_id = "2345678"
+        card.internal_chat_id = chat_id
         card.text = "Example text for deleting user cards in callboard"
         card.hashtags = []
         card.delete_until = ""
@@ -172,3 +177,48 @@ def test_delete_user_cards(temp_catalog_card):
     callboard.delete_user_card(user_id, chat_id, temp_catalog_card)
     result = callboard.list_card(temp_catalog_card, chat_id, by_hashtag=False)
     assert result == []
+
+def test_ban_user(temp_catalog_card, temp_catalog_chat):
+    '''Тесто проверяет функциональность бана пользователя'''
+    i = 0
+    user_id = "1234567890"
+    chat_id = "1234567890"
+    while i!=4:
+        i+=1
+        card_id = str(uuid.uuid4())
+        card = Card()
+        card.card_id = card_id
+        card.message_id = card_id
+        card.external_user_id = user_id
+        card.chat_id = chat_id
+        card.internal_chat_id = chat_id
+        card.text = "Example text for deleting user cards in callboard"
+        card.hashtags = []
+        card.delete_until = ""
+        card.publish_date = datetime.datetime.now().timestamp()
+        card.has_link = False
+        card.link = ""
+        CardDTO(temp_catalog_card).add_card_by_id(card_id, card.to_dict())
+    chat_data = {
+        "external_chat_id": chat_id,
+        "internal_chat_id": chat_id,
+        "chat_name": "Test chat",
+        "republish_offset": 24,
+        "last_publish": dt.datetime.now().timestamp(),
+        "removing_offset": 24,
+        "need_to_pin": False,
+        "previous_pin_id": None,
+        "banned_users": []
+    }
+    callboard.add_chat(Chat().from_dict(chat_data),temp_catalog_chat)
+    result = callboard.list_card(temp_catalog_card, chat_id, by_hashtag=False)
+    assert result != []
+    print(callboard.ban_user(user_id, chat_id, temp_catalog_chat, temp_catalog_card))
+    result = callboard.list_card(temp_catalog_card, chat_id, by_hashtag=False)
+    assert result == []
+    chat_data = callboard.get_chat_by_external_id(chat_id, temp_catalog_chat)
+    assert user_id in chat_data["banned_users"]
+    callboard.unban_user(user_id, chat_id, temp_catalog_chat)
+    chat_data = callboard.get_chat_by_external_id(chat_id, temp_catalog_chat)
+    assert user_id not in chat_data["banned_users"]
+    

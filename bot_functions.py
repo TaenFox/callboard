@@ -111,7 +111,7 @@ def set_publish_offset(message_text:str, chat_id:str, chat_name:str, bot_name:st
     
 def record_card(message:Message, bot_username:str, path_card:str="", path_chat:str = ""):
     try:
-        if is_banned(str(message.from_user.id), str(message.chat.id)): return False
+        if callboard.is_banned(str(message.from_user.id), str(message.chat.id)): return False
         chat_id = str(message.chat.id)
         chat_fullname = message.chat.full_name
         message_id = str(message.message_id)
@@ -154,48 +154,3 @@ def record_card(message:Message, bot_username:str, path_card:str="", path_chat:s
         print(f"Ошибка записи объявления: {e}")
         return False
     
-def ban_user(ban_user_id:str, chat_id:str, chat_name:str, path_chat:str=""):
-    '''Функция добавляет пользователя в чёрный список'''
-    chat_dict = callboard.get_chat_by_external_id(chat_id, path_chat)
-    chat = Chat()
-    if chat_dict != None: 
-        chat.from_dict(chat_dict)
-    else:
-        chat.external_chat_id = chat_id
-        chat.internal_chat_id = str(uuid.uuid4())
-        chat.chat_name = chat_name
-        callboard.add_chat(chat, path_chat)
-    if ban_user_id in chat.banned_users: return f"Пользователь {ban_user_id} уже в чёрном списке"
-    chat.banned_users.append(ban_user_id)
-    callboard.modify_chat(chat)
-    callboard.delete_user_card(ban_user_id, chat_id, path_chat)
-    return f"Пользователь добавлен в чёрный список"
-
-def is_banned(external_user_id:str, chat_id:str, path_chat:str=""):
-    '''Функция проверяет наличие пользователя в чёрном списке'''
-    chat_dict = callboard.get_chat_by_external_id(chat_id, path_chat)
-    chat = Chat()
-    if chat_dict != None: 
-        chat.from_dict(chat_dict)
-    else:
-        chat.external_chat_id = chat_id
-        chat.internal_chat_id = str(uuid.uuid4())
-        chat.chat_name = "Чат создан во время проверки пользователя на бан"
-        callboard.add_chat(chat, path_chat)
-    return external_user_id in chat.banned_users
-
-def unban_user(unban_user_id:str, chat_id:str, chat_name:str, path_chat:str=""):
-    '''Функция удаляет пользователя из чёрного списка'''
-    chat_dict = callboard.get_chat_by_external_id(chat_id, path_chat)
-    chat = Chat()
-    if chat_dict != None: 
-        chat.from_dict(chat_dict)
-    else:
-        chat.external_chat_id = chat_id
-        chat.internal_chat_id = str(uuid.uuid4())
-        chat.chat_name = chat_name
-        callboard.add_chat(chat, path_chat)
-    if unban_user_id not in chat.banned_users: return f"Пользователь не в чёрном списке"
-    chat.banned_users.remove(unban_user_id)
-    callboard.modify_chat(chat)
-    return f"Пользователь удалён из чёрного списка"
