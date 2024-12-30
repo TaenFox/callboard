@@ -99,7 +99,12 @@ def republic_chat_list(path_chat:str = ""):
         for chat_dict in chat_list:
             if "republish_offset" not in chat_dict or chat_dict["republish_offset"] == None: 
                 chats_to_republic.append(chat_dict)
-                next
+                continue
+            if chat_dict["last_publish"] == None \
+            or chat_dict["last_publish"] == "" \
+            or chat_dict["last_publish"] <= 0: 
+                chats_to_republic.append(chat_dict)
+                continue
             last_publish_date = dt.datetime.fromtimestamp(chat_dict["last_publish"])
             publish_until = last_publish_date + dt.timedelta(hours=chat_dict["republish_offset"])
             if publish_until < dt.datetime.now(): chats_to_republic.append(chat_dict)
@@ -149,3 +154,15 @@ def modify_chat(chat:Chat, path:str = ""):
     except Exception as e:
         print(e)
         return None
+    
+def delete_user_card(user_id:str, chat_id:str, path:str = ""):
+    '''Удалить все записи пользователя из чата'''
+    try:
+        card_list = list_card(path, chat_id, by_hashtag=False)
+        for card_dict in card_list:
+            if card_dict["external_user_id"] == user_id:
+                CardDTO(path).delete_card_by_id(card_dict["card_id"])
+        return True
+    except Exception as e:
+        print(f"Can't delete user cards: {e}")
+        return False

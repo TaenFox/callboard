@@ -141,3 +141,34 @@ def test_add_modify_and_get_chat(temp_catalog_chat):
     result_chat_data = callboard.get_chat_by_internal_id(modified_chat_id, temp_catalog_chat)
     assert result_chat_data != None
     assert chat_data != result_chat_data
+
+def test_delete_user_cards(temp_catalog_card):
+    '''Тест проверяет функцию удаления всех карточек 
+    пользователя из чата: 
+    - добавляет 4 карточки
+    - удаляет 2 карточки
+    - проверяет наличие оставшихся карточек'''
+    i = 0
+    user_id = "1234567890"
+    chat_id = "1234567890"
+    while i!=4:
+        i+=1
+        card_id = str(uuid.uuid4())
+        card = Card()
+        card.card_id = card_id
+        card.message_id = card_id
+        card.external_user_id = user_id
+        card.chat_id = chat_id
+        card.internal_chat_id = "2345678"
+        card.text = "Example text for deleting user cards in callboard"
+        card.hashtags = []
+        card.delete_until = ""
+        card.publish_date = datetime.datetime.now().timestamp()
+        card.has_link = False
+        card.link = ""
+        CardDTO(temp_catalog_card).add_card_by_id(card_id, card.to_dict())
+    result = callboard.list_card(temp_catalog_card, chat_id, by_hashtag=False)
+    assert result != []
+    callboard.delete_user_card(user_id, chat_id, temp_catalog_card)
+    result = callboard.list_card(temp_catalog_card, chat_id, by_hashtag=False)
+    assert result == []
