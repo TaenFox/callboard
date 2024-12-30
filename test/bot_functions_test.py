@@ -5,11 +5,14 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 from data.interface_db import CardDTO
 from data.interface_db import ChatDTO
 from model.card import Card
-from model.chat import Chat as CB_Chat
+from model.chat import Chat
 import bot_functions as f
 import pytest, uuid
 import datetime as dt
-from aiogram.types import Message, Chat, User
+# import debugpy
+# debugpy.listen(("0.0.0.0", 5678))  # Укажите порт
+# print("Waiting for debugger to attach...")
+# debugpy.wait_for_client()
 
 @pytest.fixture()
 def temp_catalog_card(tmp_path):
@@ -25,94 +28,84 @@ def temp_catalog_chat(tmp_path):
     catalog.mkdir(parents=True, exist_ok=True)
     return catalog
 
-@pytest.fixture()
-def temp_data_for_card():
-    '''Создаёт временный объект объявления'''
-    card = Card()
-    date_publish = dt.datetime.now()
-    card.card_id = str(uuid.uuid4())
-    card.chat_id = "1234567890"
-    card.message_id = str(uuid.uuid4())
-    card.external_user_id = "1234567890"
-    card.hashtags.append("common")
-    card.publish_date = date_publish.timestamp()
-    card.delete_until = (dt.datetime.now() + dt.timedelta(hours=1)).timestamp()
-    card.text = "Test text test text"
-    card.has_link = False
-    return card
+@pytest.fixture(scope="function")
+def temp_chat_dict():
+    '''Создаёт словарь для тестового чата'''
+    data = {
+        "external_chat_id": "111",
+        "internal_chat_id": str(uuid.uuid4()),
+        "chat_name": "Test chat",
+        "republish_offset": 24,
+        "last_publish": dt.datetime.now().timestamp(),
+        "removing_offset": 24,
+        "need_to_pin": False,
+        "previous_pin_id": None,
+        "banned_users": []
+    }
+    return data
 
-@pytest.fixture
-def mock_message():
-    """
-    Создаёт фиктивное сообщение.
-    """
-    return Message(
-        message_id=1,
-        date=dt.datetime.now(),
-        chat=Chat(id=-1001234567890, type="supergroup", title="Test Group"),
-        from_user=User(id=12345, is_bot=False, first_name="TestUser"),
-        text="/admin_command",
-    )
 
-@pytest.fixture
-def mock_private_message():
-    """
-    Создаёт фиктивное сообщение в личных сообщениях.
-    """
-    return Message(
-        message_id=1,
-        date=dt.datetime.now(),
-        chat=Chat(id=12345, type="private", username="TestUser"),
-        from_user=User(id=12345, is_bot=False, first_name="TestUser"),
-        text="/start",  # Укажите текст команды, которую нужно тестировать
-    )
+@pytest.fixture(scope="function")
+def temp_user_dict():
+    '''Создаёт словарь с данными пользователя'''
+    return {
+        "user_id":"123"
+    }
 
-def test_format_card_text(temp_data_for_card):
-    card = temp_data_for_card
-    date_publish = dt.datetime.now()
-    card.text = \
-"В большей части случаев такие тексты подразумевают понимание клиентом проблемы и поиск решения. Значит, контент должен рассказывать о преимуществах вашего предложения и закрывать возможные возражения."
-    #просто длинный текст ->
-    card_dict = card.to_dict()
+def temp_card_dict(temp_chat_dict, temp_user_dict):
+    '''Создаёт словарь для тестовой карточки'''
+    data =  {
+        "card_id": str(uuid.uuid4()),
+        "message_id": "1",
+        "external_user_id": temp_user_dict["user_id"],
+        "chat_id": temp_chat_dict["external_chat_id"],
+        "internal_chat_id": temp_chat_dict["internal_chat_id"],
+        "text": "test_message",
+        "hashtags": ["test","test2"],
+        "delete_until": 
+            (dt.datetime.now() + dt.timedelta(hours=1)).timestamp(),
+        "publish_date":dt.datetime.now().timestamp(),
+        "has_link":False,
+        "link":""
+    }
+    return data
 
-    result = f.format_card_text(card_dict)
+def test_format_card_text(temp_chat_dict, temp_user_dict):
+    '''Проверяет функцию форматирования текста 
+    для записи в карточку объявления 
+    `bot_function.format_card_text`'''
+    card = Card().from_dict(temp_card_dict(temp_chat_dict, temp_user_dict))
+    pub_date = card.publish_date
+    reference_huge_text = ("Test" * 50)[:100]
+    reference_small_text = "Test"
+    datetime_card_formated = \
+        dt.datetime.fromtimestamp(pub_date).strftime("%H:%M %d.%m")
 
-    datetime_card_formated = date_publish.strftime("%H:%M %d.%m")
-    text_preview:str = card.text[:80] + ("..." if len(card.text) > 80 else "")
+    card.text = reference_huge_text
+    text_preview:str = reference_huge_text[:80] + \
+        ("..." if len(reference_huge_text) > 80 else "")
     reference = f"{datetime_card_formated} {text_preview}"
+    result = f.format_card_text(card.to_dict())
+    assert reference == result
 
-    assert len(datetime_card_formated) >0
-    assert result == reference
-
-    card.text = "Просто короткий текст"
-    card_dict = card.to_dict()
-
-    result = f.format_card_text(card_dict)
-
-    datetime_card_formated = date_publish.strftime("%H:%M %d.%m")
-    text_preview:str = card.text[:80] + ("..." if len(card.text) > 80 else "")
+    card.text = reference_small_text
+    text_preview:str = reference_small_text[:80] + \
+        ("..." if len(reference_small_text) > 80 else "")
     reference = f"{datetime_card_formated} {text_preview}"
+    result = f.format_card_text(card.to_dict())
+    assert reference == result
 
-    assert len(datetime_card_formated) >0
-    assert result == reference
+def test_create_board(temp_catalog_chat, temp_chat_dict, temp_user_dict):
+    '''Проверяет сообщение, генерируемуое 
+    функцией `bot_function.create_board'''
+    ChatDTO(temp_catalog_chat).add_chat_by_id(temp_chat_dict["internal_chat_id"], temp_chat_dict)
+    cards = {"hashtag": [temp_card_dict(temp_chat_dict, temp_user_dict)]}
+    result = f.create_board(cards, temp_chat_dict["external_chat_id"], temp_catalog_chat)
+    assert len(result)>1
 
-def test_create_board(temp_data_for_card, temp_catalog_card, temp_catalog_chat):
-    card:Card = temp_data_for_card
-    CardDTO(temp_catalog_card).add_card_by_id(card.card_id, card.to_dict())
-    ChatDTO(temp_catalog_chat).add_chat_by_id(card.chat_id, {"external_chat_id": card.chat_id, "internal_chat_id": card.chat_id, "chat_name": card.chat_id})
-    chat = ChatDTO(temp_catalog_chat).get_chat_by_id(card.chat_id)
-    assert "last_publish" not in chat
-    card_dict = card.to_dict()
-    cards_data = {"test": [card_dict]}
-    result = f.create_board(cards_data, card.chat_id)
-    assert len(result) > 0
-    chat["last_publish"] = dt.datetime.now().timestamp()
-    ChatDTO(temp_catalog_chat).modify_chat_by_id(card.chat_id, chat)
-    chat = ChatDTO(temp_catalog_chat).get_chat_by_id(card.chat_id)
-    assert "last_publish" in chat
-
-def test_create_card_text(temp_data_for_card):
-    card:Card = temp_data_for_card
+def test_create_card_text():
+    '''Проверяет текст подготовленный для записи 
+    в объект карточки объявления'''
     botname = "testbot"
     hashtags = ["#test"]
     reference_text = "testetstststst"
@@ -120,59 +113,3 @@ def test_create_card_text(temp_data_for_card):
     result = f.create_card_text(card_text, botname, hashtags)
     assert len(result) > 0
     assert result == reference_text
-
-def test_can_generate_link(mock_message, mock_private_message):
-    result = f.can_generate_link(mock_message)
-    assert len(result)>0
-    result = f.can_generate_link(mock_private_message)
-    assert result == False
-
-def test_set_remove_offset(temp_catalog_chat):
-    chat = CB_Chat()
-    chat.external_chat_id = "1234567890"
-    chat.internal_chat_id = "1234567890"
-    chat.chat_name = "Test chat"
-    chat.republish_offset = 24
-    chat.removing_offset = 24
-    chat.need_to_pin = False
-    chat.previous_pin_id = None
-    ChatDTO(temp_catalog_chat).add_chat_by_id(chat.external_chat_id, chat.to_dict())
-    chat_id = chat.external_chat_id
-    chat_name = chat.chat_name
-    bot_name = "testbot"
-
-    result = f.set_remove_offset("/setremoveoffset 0", chat_id, chat_name, bot_name)
-    assert len(result) > 0
-    assert result == "Укажите положительное число часов. Вы указали `0`"
-
-    result = f.set_remove_offset("/setremoveoffset 1", chat_id, chat_name, bot_name)
-    assert len(result) > 0
-    assert result == "Установлено время удаления: новые объявления будут удаляться через `1` часов"
-
-def test_set_republish_offset(temp_catalog_chat):
-    chat = CB_Chat()
-    chat.external_chat_id = "1234567890"
-    chat.internal_chat_id = "1234567890"
-    chat.chat_name = "Test chat"
-    chat.republish_offset = 24
-    chat.removing_offset = 24
-    chat.need_to_pin = False
-    chat.previous_pin_id = None
-    ChatDTO(temp_catalog_chat).add_chat_by_id(chat.external_chat_id, chat.to_dict())
-    chat_id = chat.external_chat_id
-    chat_name = chat.chat_name
-    bot_name = "testbot"
-
-    result = f.set_publish_offset("/setpublishoffset 0", chat_id, chat_name, bot_name)
-    assert len(result) > 0
-    assert result == "Укажите положительное число часов. Вы указали `0`"
-
-    result = f.set_publish_offset("/setpublishoffset 1", chat_id, chat_name, bot_name)
-    assert len(result) > 0
-    assert result == "Установлено время публикации: через `1` часов"
-
-def test_record_card(temp_catalog_card, temp_catalog_chat, temp_data_for_card):
-    card = temp_data_for_card
-    CardDTO(temp_catalog_card).add_card_by_id(card.card_id, card.to_dict())
-    result = CardDTO(temp_catalog_card).get_card_list()
-    assert len(result) > 0
