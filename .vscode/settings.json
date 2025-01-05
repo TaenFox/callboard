@@ -1,0 +1,11 @@
+{
+    "python.testing.pytestArgs": [
+        "test", "--maxfail=1", "--disable-warnings"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.testing.nosetestsEnabled": false,
+    "python.logging.level": "debug",
+    "python.envFile": "${workspaceFolder}/.venv",
+    "python.testing.pytestPath": "${workspaceFolder}/.venv/bin/pytest"
+}

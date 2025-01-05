@@ -7,7 +7,7 @@ import bot_functions as f
 # from data.interface_db import CardDTO
 from data.interface_db import ChatDTO
 from model.card import Card
-# from model.chat import Chat
+from model.chat import Chat
 import pytest, uuid
 import datetime as dt
 # import debugpy
@@ -96,24 +96,133 @@ def test_format_card_text(temp_chat_dict, temp_user_dict):
     result = f.format_card_text(card.to_dict())
     assert reference == result
 
-def test_create_board(temp_catalog_chat, temp_chat_dict, temp_user_dict):
+def test_create_card_text():
+    '''Проверяет текст подготовленный для записи 
+    в объект карточки объявления'''
+    botname = "testbot"
+    hashtags = ["#test"]
+    reference_text = "testetstststst"
+    card_text = f"{reference_text} @{botname} {hashtags[0]}"
+    result = f.create_card_text(
+        original_text=card_text,
+        botname=botname,
+        hashtags=hashtags)
+    # assert len(result) > 0
+    assert result == reference_text
+
+
+def test_set_remove_offset(temp_catalog_chat):
+    chat_data = {
+        "external_chat_id": "111",
+        "internal_chat_id": str(uuid.uuid4()),
+        "chat_name": "Test chat",
+        "republish_offset": 24,
+        "last_publish": dt.datetime.now().timestamp(),
+        "removing_offset": 24,
+        "need_to_pin": False,
+        "previous_pin_id": None,
+        "banned_users": []
+    }
+    chat_id = chat_data["external_chat_id"]
+    chat_name = chat_data["chat_name"]
+    bot_name = "testbot"
+    f.callboard.add_chat(
+        new_chat=Chat().from_dict(chat_data),
+        path=temp_catalog_chat
+    )
+
+    result = f.set_remove_offset(
+        message_text="/setremoveoffset 0",
+        chat_id=chat_id,
+        chat_name=chat_name,
+        bot_name=bot_name,
+        path_chat=temp_catalog_chat)
+    assert len(result) > 0
+    assert result == "Укажите положительное число часов. Вы указали `0`"
+
+    result = f.set_remove_offset(
+        message_text="/setremoveoffset 1",
+        chat_id=chat_id,
+        chat_name=chat_name,
+        bot_name=bot_name,
+        path_chat=temp_catalog_chat)
+    assert len(result) > 0
+    assert result == "Установлено время удаления: новые объявления будут удаляться через `1` часов"
+
+def test_set_republish_offset(temp_catalog_chat):
+    chat_data = {
+        "external_chat_id": "111",
+        "internal_chat_id": str(uuid.uuid4()),
+        "chat_name": "Test chat",
+        "republish_offset": 24,
+        "last_publish": dt.datetime.now().timestamp(),
+        "removing_offset": 24,
+        "need_to_pin": False,
+        "previous_pin_id": None,
+        "banned_users": []
+    }
+    chat_id = chat_data["external_chat_id"]
+    chat_name = chat_data["chat_name"]
+    bot_name = "testbot"
+    f.callboard.add_chat(
+        new_chat=Chat().from_dict(chat_data),
+        path=temp_catalog_chat
+    )
+
+    result = f.set_publish_offset(
+        message_text="/setpublishoffset 0",
+        chat_id=chat_id,
+        chat_name=chat_name,
+        bot_name=bot_name,
+        path_chat=temp_catalog_chat)
+    assert len(result) > 0
+    assert result == "Укажите положительное число часов. Вы указали `0`"
+
+    result = f.set_publish_offset(
+        message_text="/setpublishoffset 1",
+        chat_id=chat_id,
+        chat_name=chat_name,
+        bot_name=bot_name,
+        path_chat=temp_catalog_chat)
+    assert len(result) > 0
+    assert result == "Установлено время публикации: через `1` часов"
+
+def test_create_board(temp_catalog_chat):
     '''Проверяет сообщение, генерируемуое
     функцией `bot_function.create_board'''
-    ChatDTO(temp_catalog_chat).add_chat_by_id(temp_chat_dict["internal_chat_id"], temp_chat_dict)
-    cards = {"hashtag": [temp_card_dict(temp_chat_dict, temp_user_dict)]}
-    result = f.create_board(cards, temp_chat_dict["external_chat_id"], temp_catalog_chat)
+    chat_id = "1234567890"
+    user_id = "1234567890"
+    chat_data = {
+        "external_chat_id": chat_id,
+        "internal_chat_id": chat_id,
+        "chat_name": "Test chat",
+        "republish_offset": 24,
+        "last_publish": dt.datetime.now().timestamp(),
+        "removing_offset": 24,
+        "need_to_pin": False,
+        "previous_pin_id": None,
+        "banned_users": []
+    }
+    f.callboard.add_chat(
+        new_chat=Chat().from_dict(chat_data),
+        path=temp_catalog_chat
+    )
+    card_id = str(uuid.uuid4())
+    card = Card()
+    card.card_id = card_id
+    card.message_id = card_id
+    card.external_user_id = user_id
+    card.chat_id = chat_id
+    card.internal_chat_id = chat_id
+    card.text = "Example text for deleting user cards in callboard"
+    card.hashtags = []
+    card.delete_until = ""
+    card.publish_date = dt.datetime.now().timestamp()
+    card.has_link = False
+    card.link = ""
+    f.callboard.add_card(
+        new_card=card,
+        path=temp_catalog_card)
+    cards = {"hashtag": [card.to_dict()]}
+    result = f.create_board(cards, chat_id, temp_catalog_chat)
     assert len(result)>1
-
-# def test_create_card_text():
-#     '''Проверяет текст подготовленный для записи 
-#     в объект карточки объявления'''
-#     botname = "testbot"
-#     hashtags = ["#test"]
-#     reference_text = "testetstststst"
-#     card_text = f"{reference_text} @{botname} {hashtags[0]}"
-#     result = f.create_card_text(
-#         original_text=card_text,
-#         botname=botname,
-#         hashtags=hashtags)
-#     # assert len(result) > 0
-#     assert result == reference_text
