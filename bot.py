@@ -98,7 +98,7 @@ async def handle_ban_command(message: Message):
         await message.reply("Ответьте командой на сообщение пользователя, которого хотите разбанить")
         return
     unban_user_id= str(message.reply_to_message.from_user.id)
-    reply_text = callboard.unban_user(unban_user_id, str(message.chat.id), message.chat.full_name)
+    reply_text = callboard.unban_user(unban_user_id, str(message.chat.id))
     await message.reply(reply_text)
 
 # Хендлер для сообщений
@@ -139,7 +139,7 @@ async def clear():
     chats_to_republic = callboard.republic_chat_list()
     for chat_dict in chats_to_republic:
         text_message = bot_functions.create_board(
-                callboard.list_card(chat_id=chat_dict["external_chat_id"]),
+                callboard.list_card(internal_chat_id=chat_dict["external_chat_id"]),
                 chat_dict["external_chat_id"])
         if text_message != "": 
             sent_message = await bot.send_message(

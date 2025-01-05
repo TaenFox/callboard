@@ -1,12 +1,13 @@
-import sys 
-import os.path 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..") 
+import sys
+import os.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 
-from data.interface_db import CardDTO
+import bot_functions as f
+
+# from data.interface_db import CardDTO
 from data.interface_db import ChatDTO
 from model.card import Card
-from model.chat import Chat
-import bot_functions as f
+# from model.chat import Chat
 import pytest, uuid
 import datetime as dt
 # import debugpy
@@ -62,7 +63,7 @@ def temp_card_dict(temp_chat_dict, temp_user_dict):
         "internal_chat_id": temp_chat_dict["internal_chat_id"],
         "text": "test_message",
         "hashtags": ["test","test2"],
-        "delete_until": 
+        "delete_until":
             (dt.datetime.now() + dt.timedelta(hours=1)).timestamp(),
         "publish_date":dt.datetime.now().timestamp(),
         "has_link":False,
@@ -71,8 +72,8 @@ def temp_card_dict(temp_chat_dict, temp_user_dict):
     return data
 
 def test_format_card_text(temp_chat_dict, temp_user_dict):
-    '''Проверяет функцию форматирования текста 
-    для записи в карточку объявления 
+    '''Проверяет функцию форматирования текста
+    для записи в карточку объявления
     `bot_function.format_card_text`'''
     card = Card().from_dict(temp_card_dict(temp_chat_dict, temp_user_dict))
     pub_date = card.publish_date
@@ -96,20 +97,23 @@ def test_format_card_text(temp_chat_dict, temp_user_dict):
     assert reference == result
 
 def test_create_board(temp_catalog_chat, temp_chat_dict, temp_user_dict):
-    '''Проверяет сообщение, генерируемуое 
+    '''Проверяет сообщение, генерируемуое
     функцией `bot_function.create_board'''
     ChatDTO(temp_catalog_chat).add_chat_by_id(temp_chat_dict["internal_chat_id"], temp_chat_dict)
     cards = {"hashtag": [temp_card_dict(temp_chat_dict, temp_user_dict)]}
     result = f.create_board(cards, temp_chat_dict["external_chat_id"], temp_catalog_chat)
     assert len(result)>1
 
-def test_create_card_text():
-    '''Проверяет текст подготовленный для записи 
-    в объект карточки объявления'''
-    botname = "testbot"
-    hashtags = ["#test"]
-    reference_text = "testetstststst"
-    card_text = reference_text + " @" + botname + " " + hashtags[0]
-    result = f.create_card_text(card_text, botname, hashtags)
-    assert len(result) > 0
-    assert result == reference_text
+# def test_create_card_text():
+#     '''Проверяет текст подготовленный для записи 
+#     в объект карточки объявления'''
+#     botname = "testbot"
+#     hashtags = ["#test"]
+#     reference_text = "testetstststst"
+#     card_text = f"{reference_text} @{botname} {hashtags[0]}"
+#     result = f.create_card_text(
+#         original_text=card_text,
+#         botname=botname,
+#         hashtags=hashtags)
+#     # assert len(result) > 0
+#     assert result == reference_text

@@ -62,6 +62,15 @@ def list_card(path:str = "", internal_chat_id:str = "", by_hashtag:bool = True):
     except Exception as e:
         print(f"Error while combine card list: {e}")
         return None
+    
+def get_card_by_id(card_id:str, path:str = ""):
+    '''Получить запись card по её id'''
+    try:
+        result = CardDTO(path).get_card_by_id(card_id)
+        return result
+    except Exception as e:
+        print(e)
+        return None
 
 def list_chat(path:str = ""):
     '''Получить список всех записей chat'''
@@ -116,7 +125,7 @@ def republic_chat_list(path_chat:str = ""):
 def get_chat_by_external_id(external_chat_id:str, path:str = ""):
     '''Получить чат по идентификатору из телеграм'''
     try:
-        known_chat_list = ChatDTO(path).get_chat_list()
+        known_chat_list = list_chat(path)
         for chat_dict in known_chat_list:
             if external_chat_id == chat_dict['external_chat_id']: return chat_dict
         return None
@@ -155,10 +164,12 @@ def modify_chat(chat:Chat, path:str = ""):
         print(e)
         return None
     
-def delete_user_card(user_id:str, chat_id:str, card_path:str = ""):
+def delete_user_card(user_id:str, external_chat_id:str, card_path:str = "", path_chat:str = ""):
     '''Удалить все записи пользователя из чата'''
     try:
-        card_list = list_card(card_path, chat_id, by_hashtag=False)
+        chat = get_chat_by_external_id(external_chat_id, path_chat)
+        internal_chat_id = chat["internal_chat_id"]
+        card_list = list_card(card_path, internal_chat_id, by_hashtag=False)
         for card_dict in card_list:
             if card_dict["external_user_id"] == user_id:
                 CardDTO(card_path).delete_card_by_id(card_dict["card_id"])
@@ -179,7 +190,7 @@ def ban_user(ban_user_id:str, chat_id:str, path_chat:str="", path_card:str = "")
     if ban_user_id in chat.banned_users: return f"Пользователь {ban_user_id} уже в чёрном списке"
     chat.banned_users.append(ban_user_id)
     modify_chat(chat, path_chat)
-    delete_user_card(ban_user_id, chat_id, path_card)
+    delete_user_card(ban_user_id, chat_id, path_card, path_chat)
     return f"Пользователь добавлен в чёрный список"
 
 def is_banned(external_user_id:str, chat_id:str, path_chat:str=""):
@@ -192,7 +203,7 @@ def is_banned(external_user_id:str, chat_id:str, path_chat:str=""):
         return False
     return external_user_id in chat.banned_users
 
-def unban_user(unban_user_id:str, chat_id:str, path_chat:str=""):
+def unban_user(external_user_id:str, chat_id:str, path_chat:str=""):
     '''Функция удаляет пользователя из чёрного списка'''
     chat_dict = get_chat_by_external_id(chat_id, path_chat)
     chat = Chat()
@@ -200,7 +211,7 @@ def unban_user(unban_user_id:str, chat_id:str, path_chat:str=""):
         chat.from_dict(chat_dict)
     else:
         return "Настройки чата не подготовлены - создайте хотя бы одно объявление"
-    if unban_user_id not in chat.banned_users: return f"Пользователь не в чёрном списке"
-    chat.banned_users.remove(unban_user_id)
+    if external_user_id not in chat.banned_users: return f"Пользователь не в чёрном списке"
+    chat.banned_users.remove(external_user_id)
     modify_chat(chat, path_chat)
     return f"Пользователь удалён из чёрного списка"
