@@ -14,7 +14,8 @@ def create_board(cards_data, external_chat_id:str, path_chat="") -> str:
         for card in cards:
             result.append(format_card_text(card))
         result.append("")  # Пустая строка для разделения
-    chat = Chat().from_dict(callboard.get_chat_by_external_id(external_chat_id, path_chat))
+    chat_dict = callboard.get_chat_by_external_id(external_chat_id, path_chat)
+    chat = Chat().from_dict(chat_dict)
     chat.last_publish = dt.datetime.now().timestamp()
     callboard.modify_chat(chat, path_chat)
     return "\n".join(result)
@@ -118,15 +119,16 @@ def record_card(message:Message, bot_username:str, path_card:str="", path_chat:s
         message_text = message.text
         from_user_id = str(message.from_user.id)
 
-        chat_dict = callboard.get_chat_by_external_id(chat_id, path_chat)
         chat = Chat()
-        if chat_dict != None: 
-            chat.from_dict(chat_dict)
-        else:
-            chat.external_chat_id = chat_id
-            chat.internal_chat_id = str(uuid.uuid4())
-            chat.chat_name = chat_fullname
-            callboard.add_chat(chat, path_chat)
+        chat.from_dict(record_chat(message=message, path_chat=path_chat))
+        # chat_dict = callboard.get_chat_by_external_id(chat_id, path_chat)
+        # if chat_dict != None: 
+        #     chat.from_dict(chat_dict)
+        # else:
+        #     chat.external_chat_id = chat_id
+        #     chat.internal_chat_id = str(uuid.uuid4())
+        #     chat.chat_name = chat_fullname
+        #     callboard.add_chat(chat, path_chat)
 
         hashtags = re.findall(r"#\w+", message_text)
         card_text = create_card_text(message_text, bot_username, hashtags)
@@ -154,3 +156,18 @@ def record_card(message:Message, bot_username:str, path_card:str="", path_chat:s
         print(f"Ошибка записи объявления: {e}")
         return False
     
+def record_chat(message:Message, path_chat:str = ""):
+    '''Проверяет наличие и при отсутствии сохраняет объект чата'''
+    chat_id = str(message.chat.id)
+    chat_fullname = message.chat.full_name
+
+    chat_dict = callboard.get_chat_by_external_id(chat_id, path_chat)
+    chat = Chat()
+    if chat_dict != None: 
+        chat.from_dict(chat_dict)
+        return chat_dict
+    else:
+        chat.external_chat_id = chat_id
+        chat.internal_chat_id = str(uuid.uuid4())
+        chat.chat_name = chat_fullname
+        return callboard.add_chat(chat, path_chat)
