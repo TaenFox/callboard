@@ -6,6 +6,7 @@ from aiogram import F
 import asyncio
 import callboard
 import bot_functions
+import bot_help
 
 # Получение токена бота из переменной окружения
 TOKEN = os.environ.get("TOKEN_BOT_CALLBOARD")
@@ -21,7 +22,11 @@ dp = Dispatcher()
 @dp.message(Command("board"))
 async def handle_board_command(message: Message):
     try:
-        cards_data = callboard.list_card(chat_id=str(message.chat.id))
+        bot_functions.record_chat(message=message)
+        chat_dict = callboard.get_chat_by_external_id(str(message.chat.id))
+        internal_chat_id = ""
+        if chat_dict != None: internal_chat_id = chat_dict['internal_chat_id']
+        cards_data = callboard.list_card(internal_chat_id=internal_chat_id)
         if len(cards_data)==0: await message.reply("Нет актуальных объявлений")
         else:
             board_text = bot_functions.create_board(cards_data, str(message.chat.id))
@@ -34,6 +39,7 @@ async def handle_board_command(message: Message):
 @dp.message(Command("clearboard"))
 async def handle_clearboard_command(message: Message):
     try:
+        bot_functions.record_chat(message=message)
         result = await clear()
         if result == False: raise Exception()
         try:
@@ -53,6 +59,8 @@ async def handle_setremoveoffset_command(message: Message):
     if not await is_user_admin(message.chat.id, message.from_user.id):
         await message.reply("Действие доступно только администратору")
         return
+    
+    bot_functions.record_chat(message=message)
     bot_name = (await bot.get_me()).username
     answer = bot_functions.set_remove_offset(message.text,
                                              str(message.chat.id),
@@ -66,6 +74,7 @@ async def handle_setpublishoffset_command(message: Message):
     if not await is_user_admin(message.chat.id, message.from_user.id):
         await message.reply("Действие доступно только администратору")
         return
+    bot_functions.record_chat(message=message)
     bot_name = (await bot.get_me()).username
     answer = bot_functions.set_publish_offset(message.text,
                                              str(message.chat.id),
@@ -73,21 +82,70 @@ async def handle_setpublishoffset_command(message: Message):
                                              bot_name)
     await message.reply(answer)
 
+@dp.message(Command("ban"))
+async def handle_ban_command(message: Message):
+    '''Ищет упоминание пользователя в команде, 
+    помещает его в чёрный список и 
+    удаляет его объявления в этом чате'''
+    if not await is_user_admin(message.chat.id, message.from_user.id):
+        await message.reply("Действие доступно только администратору")
+        return
+    if message.reply_to_message == None:
+        await message.reply("Ответьте командой на сообщение пользователя, которого хотите забанить")
+        return
+    bot_functions.record_chat(message=message)
+    ban_user_id= str(message.reply_to_message.from_user.id)
+    reply_text = callboard.ban_user(ban_user_id, str(message.chat.id))
+    await message.reply(reply_text)
+
+@dp.message(Command("unban"))
+async def handle_ban_command(message: Message):
+    '''Снимает ограничение на публикацию для пользователя'''
+    if not await is_user_admin(message.chat.id, message.from_user.id):
+        await message.reply("Действие доступно только администратору")
+        return
+    if message.reply_to_message == None:
+        await message.reply("Ответьте командой на сообщение пользователя, которого хотите разбанить")
+        return
+    bot_functions.record_chat(message=message)
+    unban_user_id= str(message.reply_to_message.from_user.id)
+    reply_text = callboard.unban_user(unban_user_id, str(message.chat.id))
+    await message.reply(reply_text)
+
+@dp.message(Command("help"))
+async def handle_help_command(message:Message):
+    '''Отправляет в ответ на сообщение с командой help'''
+    bot_name = (await bot.get_me()).username
+    is_admin = await is_user_admin(message.chat.id, message.from_user.id)
+    bot_functions.record_chat(message=message)
+    await message.reply(bot_help.answer(
+        bot_name=bot_name, 
+        is_admin=is_admin),
+        parse_mode="Markdown")
+
 # Хендлер для сообщений
 @dp.message(F.text)
 async def handle_mention(message: Message):
     bot_username = (await bot.get_me()).username
-
+    
     if f"@{bot_username}" in message.text:
         result = bot_functions.record_card(message, bot_username)
         
         try:
             if result == True:
-                await bot.set_message_reaction(
-                    chat_id=message.chat.id,
-                    message_id=message.message_id,
-                    reaction=[ReactionTypeEmoji(emoji="✍️")]
-                )
+                try:
+                    await bot.set_message_reaction(
+                        chat_id=message.chat.id,
+                        message_id=message.message_id,
+                        reaction=[ReactionTypeEmoji(emoji="✍️")]
+                    )
+                except:
+                    # Если вдруг этот эмодзи заблокирован в чате
+                    await bot.set_message_reaction(
+                        chat_id=message.chat.id,
+                        message_id=message.message_id,
+                        reaction=[ReactionTypeEmoji(emoji="👍")]
+                    )                    
             else:
                 await bot.set_message_reaction(
                     chat_id=message.chat.id,
@@ -103,13 +161,14 @@ async def clear():
     chats_to_republic = callboard.republic_chat_list()
     for chat_dict in chats_to_republic:
         text_message = bot_functions.create_board(
-                callboard.list_card(chat_id=chat_dict["external_chat_id"]),
+                callboard.list_card(internal_chat_id=chat_dict["external_chat_id"]),
                 chat_dict["external_chat_id"])
         if text_message != "": 
             sent_message = await bot.send_message(
                 chat_id=chat_dict["external_chat_id"], 
-                text=text_message)
-            await bot.pin_message(chat_id=chat_dict["external_chat_id"], message_id=sent_message.message_id)
+                text=text_message,
+                parse_mode="Markdown")
+            await bot.pin_chat_message(chat_id=chat_dict["external_chat_id"], message_id=sent_message.message_id)
     #print("Очистили доску")
 
 async def is_user_admin(chat_id: int, user_id: int) -> bool:
@@ -130,10 +189,10 @@ async def schedule_daily_clear():
         try:
             await clear()  # Вызов функции clear
         except Exception as e:
-            print(f"Ошибка при вызове очистке доски: {e}")
+            print(f"Ошибка при републикации: {e}")
         
-        # Ожидание 24 часа
-        await asyncio.sleep(10)
+        # Ожидание 5 минут
+        await asyncio.sleep(360)
 
 # Запуск бота
 async def main():

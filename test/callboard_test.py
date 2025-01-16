@@ -2,13 +2,16 @@ import sys
 import os.path 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..") 
 
-from data.interface_db import CardDTO
-from data.interface_db import ChatDTO
 from model.card import Card
 from model.chat import Chat
 import callboard
 import pytest
 import uuid, datetime
+import datetime as dt
+# import debugpy
+# debugpy.listen(("0.0.0.0", 5678))  # Укажите порт
+# print("Waiting for debugger to attach...")
+# debugpy.wait_for_client()
 
 @pytest.fixture()
 def temp_catalog_card(tmp_path):
@@ -47,17 +50,22 @@ def test_get_callboard_by_hashtag(temp_catalog_card):
             card.delete_until = ""
             card.text = "Example text for list of cards in callboard"
             card.has_link = False
-            CardDTO(temp_catalog_card).add_card_by_id(card_id, card.to_dict())
+            callboard.add_card(
+                new_card=card,
+                path=temp_catalog_card)
 
     card_id = str(uuid.uuid4())
-    CardDTO(temp_catalog_card).add_card_by_id(card_id, \
-                             {
-                                 "card_id": card_id,
-                                 "message_id": card_id,
-                                 "text": "Example text for list of cards in callboard (no hashtag)",
-                                 "hashtags":[],
-                                 "delete_until": ""
-                             })
+    card.card_id = card_id
+    card.message_id = card_id
+    card.external_user_id = "1234567890"
+    while len(card.hashtags)!=0:
+        card.hashtags.pop()
+    card.delete_until = ""
+    card.text = "Example text for list of cards in callboard"
+    card.has_link = False
+    callboard.add_card(
+        new_card=card,
+        path = temp_catalog_card)
     result = callboard.list_card(temp_catalog_card)
     print(result)
     assert result != []
@@ -70,39 +78,26 @@ def test_cleaning_cards(temp_catalog_card):
     past_date_until = datetime.datetime.now() - datetime.timedelta(hours=1)
     future_date_until = datetime.datetime.now() + datetime.timedelta(hours=1)
     current_date = datetime.datetime.now()
-    CardDTO(temp_catalog_card).add_card_by_id(card_id, \
-                             {
-                                 "card_id": card_id,
-                                 "message_id": card_id,
-                                 "external_user_id": "12345",
-                                 "chat_id": "1234",
-                                 "internal_chat_id": "2345678",
-                                 "text": "Example text for cleaning cards in callboard",
-                                 "hashtags":[],
-                                 "delete_until": past_date_until.timestamp(),
-                                 "publish_date": current_date.timestamp(),
-                                 "has_link": False,
-                                 "link": ""
-                             })
+    card = Card()
+    card.card_id = card_id
+    card.message_id = card_id
+    card.external_user_id = "12345"
+    card.chat_id =  "1234"
+    card.internal_chat_id = "2345678"
+    card.text = "Example text for cleaning cards in callboard"
+    card.delete_until = past_date_until.timestamp()
+    card.publish_date = current_date.timestamp()
+    callboard.add_card(
+        new_card=card,
+        path=temp_catalog_card)
     callboard.clear(temp_catalog_card)
-    result = CardDTO(temp_catalog_card).get_card_by_id(card_id)
+    result = callboard.get_card_by_id(card_id=card_id, path=temp_catalog_card)
     assert result==None
 
-    CardDTO(temp_catalog_card).add_card_by_id(card_id, \
-                             {
-                                 "card_id": card_id,
-                                 "message_id": card_id,
-                                 "chat_id": "1234",
-                                 "internal_chat_id": "2345678",
-                                 "text": "Example text for cleaning cards in callboard",
-                                 "hashtags":[],
-                                 "delete_until": future_date_until.timestamp(),
-                                 "publish_date": current_date.timestamp(),
-                                 "has_link": False,
-                                 "link": ""
-                             })
-    callboard.clear(temp_catalog_card)    
-    result = CardDTO(temp_catalog_card).get_card_by_id(card_id)
+    callboard.add_card(
+        new_card=card,
+        path=temp_catalog_card)  
+    result = callboard.get_card_by_id(card_id=card_id, path=temp_catalog_card)
     assert result!=None
 
 def test_add_modify_and_get_chat(temp_catalog_chat):
@@ -126,7 +121,9 @@ def test_add_modify_and_get_chat(temp_catalog_chat):
         chat.removing_offset = 24
         chat.need_to_pin = False
         chat.previous_pin_id = None
-        ChatDTO(temp_catalog_chat).add_chat_by_id(chat_id, chat.to_dict())
+        callboard.add_chat(
+            new_chat = chat,
+            path=temp_catalog_chat)
     for reference in chat_id_list:
         result_inteenal_chat_id = callboard.get_chat_by_internal_id(reference, temp_catalog_chat)
         result_external_chat_id = callboard.get_chat_by_external_id(reference + "1234567890", temp_catalog_chat)
@@ -137,7 +134,132 @@ def test_add_modify_and_get_chat(temp_catalog_chat):
     chat_data = callboard.get_chat_by_internal_id(modified_chat_id, temp_catalog_chat)
     modified_chat_data = chat_data.copy()
     modified_chat_data['removing_offset'] = 0
-    callboard.modify_chat(Chat().from_dict(modified_chat_data), temp_catalog_chat)
-    result_chat_data = callboard.get_chat_by_internal_id(modified_chat_id, temp_catalog_chat)
+    callboard.modify_chat(
+        chat=Chat().from_dict(modified_chat_data), 
+        path=temp_catalog_chat)
+    result_chat_data = callboard.get_chat_by_internal_id(
+        internal_chat_id=modified_chat_id, 
+        path=temp_catalog_chat)
     assert result_chat_data != None
     assert chat_data != result_chat_data
+
+def test_delete_user_cards(temp_catalog_card, temp_catalog_chat):
+    '''Тест проверяет функцию удаления всех карточек 
+    пользователя из чата: 
+    - добавляет 4 карточки
+    - удаляет 2 карточки
+    - проверяет наличие оставшихся карточек'''
+    i = 0
+    user_id = "1234567890"
+    chat_id = "1234567890"
+    while i!=4:
+        i+=1
+        card_id = str(uuid.uuid4())
+        card = Card()
+        card.card_id = card_id
+        card.message_id = card_id
+        card.external_user_id = user_id
+        card.chat_id = chat_id
+        card.internal_chat_id = chat_id
+        card.text = "Example text for deleting user cards in callboard"
+        card.hashtags = []
+        card.delete_until = ""
+        card.publish_date = datetime.datetime.now().timestamp()
+        card.has_link = False
+        card.link = ""
+        callboard.add_card(
+            new_card=card,
+            path=temp_catalog_card)
+    chat_data = {
+        "external_chat_id": chat_id,
+        "internal_chat_id": chat_id,
+        "chat_name": "Test chat",
+        "republish_offset": 24,
+        "last_publish": dt.datetime.now().timestamp(),
+        "removing_offset": 24,
+        "need_to_pin": False,
+        "previous_pin_id": None,
+        "banned_users": []
+    }
+    callboard.add_chat(
+        new_chat=Chat().from_dict(chat_data),
+        path=temp_catalog_chat)
+    result = callboard.list_card(
+        path=temp_catalog_card, 
+        internal_chat_id=chat_id, 
+        by_hashtag=False)
+    assert result != []
+    callboard.delete_user_card(
+        user_id=user_id, 
+        external_chat_id=chat_id, 
+        card_path=temp_catalog_card, 
+        path_chat=temp_catalog_chat)
+    result = callboard.list_card(
+        path=temp_catalog_card, 
+        internal_chat_id=chat_id, 
+        by_hashtag=False)
+    assert result == []
+
+def test_ban_user(temp_catalog_card, temp_catalog_chat):
+    '''Тесто проверяет функциональность бана пользователя'''
+    i = 0
+    user_id = "1234567890"
+    chat_id = "1234567890"
+    while i!=4:
+        i+=1
+        card_id = str(uuid.uuid4())
+        card = Card()
+        card.card_id = card_id
+        card.message_id = card_id
+        card.external_user_id = user_id
+        card.chat_id = chat_id
+        card.internal_chat_id = chat_id
+        card.text = "Example text for deleting user cards in callboard"
+        card.hashtags = []
+        card.delete_until = ""
+        card.publish_date = datetime.datetime.now().timestamp()
+        card.has_link = False
+        card.link = ""
+        callboard.add_card(
+            new_card=card,
+            path=temp_catalog_card)
+    chat_data = {
+        "external_chat_id": chat_id,
+        "internal_chat_id": chat_id,
+        "chat_name": "Test chat",
+        "republish_offset": 24,
+        "last_publish": dt.datetime.now().timestamp(),
+        "removing_offset": 24,
+        "need_to_pin": False,
+        "previous_pin_id": None,
+        "banned_users": []
+    }
+    callboard.add_chat(
+        new_chat=Chat().from_dict(chat_data),
+        path=temp_catalog_chat)
+    result = callboard.list_card(
+        temp_catalog_card, 
+        internal_chat_id=chat_id, 
+        by_hashtag=False)
+    assert result != []
+    print(callboard.ban_user(
+        ban_user_id=user_id, 
+        chat_id=chat_id, 
+        path_chat=temp_catalog_chat, 
+        path_card=temp_catalog_card))
+    result = callboard.list_card(
+        path=temp_catalog_card, 
+        internal_chat_id=chat_id, 
+        by_hashtag=False)
+    assert result == []
+    chat_data = callboard.get_chat_by_external_id(
+        external_chat_id=chat_id, 
+        path=temp_catalog_chat)
+    assert user_id in chat_data["banned_users"]
+    callboard.unban_user(
+        external_user_id=user_id, 
+        chat_id=chat_id, 
+        path_chat=temp_catalog_chat)
+    chat_data = callboard.get_chat_by_external_id(chat_id, temp_catalog_chat)
+    assert user_id not in chat_data["banned_users"]
+    

@@ -13,16 +13,16 @@ def add_card(new_card:Card, path:str = ""):
         print(e)
         return None
 
-def list_card(path:str = "", chat_id:str = "", by_hashtag:bool = True):
+def list_card(path:str = "", internal_chat_id:str = "", by_hashtag:bool = True):
     '''Получить список всех записей card'''
     try:
         result_all = CardDTO(path).get_card_list()
         if result_all == None: raise Exception("No card list!")
         
         result = []
-        if chat_id != "":
+        if internal_chat_id != "":
             for item in result_all:
-                if "chat_id" in item and item["chat_id"]==chat_id:
+                if "internal_chat_id" in item and item["internal_chat_id"]==internal_chat_id:
                     result.append(item)
         else: result = result_all
 
@@ -62,6 +62,15 @@ def list_card(path:str = "", chat_id:str = "", by_hashtag:bool = True):
     except Exception as e:
         print(f"Error while combine card list: {e}")
         return None
+    
+def get_card_by_id(card_id:str, path:str = ""):
+    '''Получить запись card по её id'''
+    try:
+        result = CardDTO(path).get_card_by_id(card_id)
+        return result
+    except Exception as e:
+        print(e)
+        return None
 
 def list_chat(path:str = ""):
     '''Получить список всех записей chat'''
@@ -99,7 +108,12 @@ def republic_chat_list(path_chat:str = ""):
         for chat_dict in chat_list:
             if "republish_offset" not in chat_dict or chat_dict["republish_offset"] == None: 
                 chats_to_republic.append(chat_dict)
-                next
+                continue
+            if chat_dict["last_publish"] == None \
+            or chat_dict["last_publish"] == "" \
+            or chat_dict["last_publish"] <= 0: 
+                chats_to_republic.append(chat_dict)
+                continue
             last_publish_date = dt.datetime.fromtimestamp(chat_dict["last_publish"])
             publish_until = last_publish_date + dt.timedelta(hours=chat_dict["republish_offset"])
             if publish_until < dt.datetime.now(): chats_to_republic.append(chat_dict)
@@ -111,7 +125,7 @@ def republic_chat_list(path_chat:str = ""):
 def get_chat_by_external_id(external_chat_id:str, path:str = ""):
     '''Получить чат по идентификатору из телеграм'''
     try:
-        known_chat_list = ChatDTO(path).get_chat_list()
+        known_chat_list = list_chat(path)
         for chat_dict in known_chat_list:
             if external_chat_id == chat_dict['external_chat_id']: return chat_dict
         return None
@@ -132,7 +146,7 @@ def get_chat_by_internal_id(internal_chat_id:str, path:str = ""):
 def add_chat(new_chat:Chat, path:str = ""):
     '''Добавить настройки чата после предварительной проверки на отсутствие'''
     try:
-        if get_chat_by_external_id(new_chat.external_chat_id) == None:
+        if get_chat_by_external_id(new_chat.external_chat_id, path) == None:
             result = ChatDTO(path).add_chat_by_id(new_chat.internal_chat_id, new_chat.to_dict())
         if result == None: raise Exception("Can't add chat")
         return result
@@ -149,3 +163,55 @@ def modify_chat(chat:Chat, path:str = ""):
     except Exception as e:
         print(e)
         return None
+    
+def delete_user_card(user_id:str, external_chat_id:str, card_path:str = "", path_chat:str = ""):
+    '''Удалить все записи пользователя из чата'''
+    try:
+        chat = get_chat_by_external_id(external_chat_id, path_chat)
+        internal_chat_id = chat["internal_chat_id"]
+        card_list = list_card(card_path, internal_chat_id, by_hashtag=False)
+        for card_dict in card_list:
+            if card_dict["external_user_id"] == user_id:
+                CardDTO(card_path).delete_card_by_id(card_dict["card_id"])
+        return True
+    except Exception as e:
+        print(f"Can't delete user cards: {e}")
+        return False
+    
+
+def ban_user(ban_user_id:str, chat_id:str, path_chat:str="", path_card:str = ""):
+    '''Функция добавляет пользователя в чёрный список'''
+    chat_dict = get_chat_by_external_id(chat_id, path_chat)
+    chat = Chat()
+    if chat_dict != None: 
+        chat.from_dict(chat_dict)
+    else:
+        return "Настройки чата не подготовлены - создайте хотя бы одно объявление"
+    if ban_user_id in chat.banned_users: return f"Пользователь {ban_user_id} уже в чёрном списке"
+    chat.banned_users.append(ban_user_id)
+    modify_chat(chat, path_chat)
+    delete_user_card(ban_user_id, chat_id, path_card, path_chat)
+    return f"Пользователь добавлен в чёрный список"
+
+def is_banned(external_user_id:str, chat_id:str, path_chat:str=""):
+    '''Функция проверяет наличие пользователя в чёрном списке'''
+    chat_dict = get_chat_by_external_id(chat_id, path_chat)
+    chat = Chat()
+    if chat_dict != None: 
+        chat.from_dict(chat_dict)
+    else:
+        return False
+    return external_user_id in chat.banned_users
+
+def unban_user(external_user_id:str, chat_id:str, path_chat:str=""):
+    '''Функция удаляет пользователя из чёрного списка'''
+    chat_dict = get_chat_by_external_id(chat_id, path_chat)
+    chat = Chat()
+    if chat_dict != None: 
+        chat.from_dict(chat_dict)
+    else:
+        return "Настройки чата не подготовлены - создайте хотя бы одно объявление"
+    if external_user_id not in chat.banned_users: return f"Пользователь не в чёрном списке"
+    chat.banned_users.remove(external_user_id)
+    modify_chat(chat, path_chat)
+    return f"Пользователь удалён из чёрного списка"
